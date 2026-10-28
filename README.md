@@ -1,104 +1,103 @@
-# LP-3 Practical Codes (C++ / Python rewrite)
+# LP-3 Practical Solutions (Python / C++)
 
-My own implementations of the LP-3 (DAA, IR, CSDF, ML) practical problem
-statements, rewritten in **C++** where possible and **Python** elsewhere.
-Every problem statement was sourced from
-[Aryan-123-app/lp3-practical-codes](https://github.com/Aryan-123-app/lp3-practical-codes)
-and re-implemented from scratch.
+Solutions to the LP-3 laboratory questions. **DAA and IR questions have
+both Python and C++ versions**; ML and CSDF are Python only (ML needs
+scikit-learn / TensorFlow, CSDF needs Pillow or Linux forensic tools).
 
-## Conventions used in every file
+## Naming scheme (sorts .py before .cpp in every file explorer)
 
-| Rule | Detail |
-| --- | --- |
-| `main()` is one function call | All logic lives in a `run()`-style driver function. |
-| Header comment block | Every file opens with `PROBLEM STATEMENT`, `HOW IT WORKS` (algorithm explanation), `COMPLEXITY` (with why) and `NOTES / INFO`. |
-| Interactive input | Programs prompt in the terminal, exactly like the original exercises. |
+- `py<n>_<Topic>.py` — Python solution
+- `q<n>_<Topic>.cpp` — C++ solution
 
-## Contents
+File explorers sort case-insensitively, and `p` < `q`, so every Python
+file appears first, followed by the C++ twins with the same question
+number. Example: `py3_FractionalKnapsack.py`, then `q3_FractionalKnapsack.cpp`.
 
-### `daa/` — Design & Analysis of Algorithms (C++)
+Style used in every file:
 
-| File | Problem | Ideas / Tags |
-| --- | --- | --- |
-| `FractionalKnapsack.cpp` | Greedy fractional knapsack | sort by value/weight ratio, O(n log n) |
-| `KnapsackDP.cpp` | 0/1 knapsack (dynamic programming) | bottom-up DP table + trace-back of chosen items, O(n·W) |
-| `HuffmanCoding.cpp` | Huffman encoding | min-priority-queue merge tree, encode/decode menu |
-| `NQueens.cpp` | N-Queens | backtracking; first queen permanently fixed at (0,0) (lab constraint) |
-| `TowerOfHanoi.cpp` | Tower of Hanoi | divide & conquer recursion, 2ⁿ−1 moves |
-| `FibonacciComparison.cpp` | Fibonacci | iterative O(n) vs recursive O(2ⁿ) timing lesson |
+- The main entry point is one call to a `run()` driver function.
+- Header comment block contains: the **QUESTION** (exact statement),
+  **HOW IT WORKS** (algorithm explanation), **COMPLEXITY** (with
+  reasoning) and **NOTES / INFO** (practical discussion points).
+- Programs that need input prompt for it in the terminal.
+- Every Python file is organised into numbered `STEP` sections:
+  **STEP 1** imports, **STEP 2** creates the needed file/dataset from
+  hardcoded data when one is required (ML scripts auto-create a small
+  demo CSV if the real Kaggle dataset is absent), later steps use and
+  process it. C++ programs need no files, so their data is embedded.
 
-Build and run (no external libraries needed):
+## Folder structure
 
-```bash
-g++ -std=c++17 -Wall -o bin/FractionalKnapsack "daa/FractionalKnapsack.cpp" && ./bin/FractionalKnapsack
+```
+daa/   Design & Analysis of Algorithms   (.py + .cpp)
+ir/    Information Retrieval             (.py + .cpp)
+csdf/  Cyber Security & Digital Forensics (Python only)
+ml/    Machine Learning                   (Python only)
 ```
 
-### `ir/` — Information Retrieval (C++)
+## DAA — `daa/`
 
-| File | Problem | Ideas / Tags |
-| --- | --- | --- |
-| `CosineSimilarity.cpp` | Document similarity | word-frequency vectors, cosine of the vector angle |
-| `MapReduce.cpp` | MapReduce word/char count | map → shuffle & sort → reduce phases |
-| `PageRankAlgo.cpp` | PageRank | power iteration, damping factor 0.85 |
-| `StopWordRemoval.cpp` | Stop-word removal | hash-set token filter (preprocessing step) |
-| `TopicPageRank.cpp` | Topic-sensitive PageRank | hand-rolled XML parse, personalized vector + dangling-mass handling |
-
-Build and run exactly like the DAA programs:
-
-```bash
-g++ -std=c++17 -Wall -o bin/CosineSimilarity "ir/CosineSimilarity.cpp" && ./bin/CosineSimilarity
-```
-
-### `csdf/` — Cyber Security & Digital Forensics
-
-| File | Problem | Language | Why not C++ |
+| Question | Python file | C++ file | Technique |
 | --- | --- | --- | --- |
-| `EmailHeaderAnalysis.cpp` | Email-header / Received-chain analysis, IPv4 extraction | C++ | — |
-| `LogCaptureEventCorrelation.cpp` | Log capture + event correlation, flag IP with ≥ 3 failed logins | C++ | — |
-| `Captcha.py` | CAPTCHA generation & verification | Python | image rendering needs Pillow |
-| `FileRecovery.py` | Deleted-file recovery (dd → fls → istat → icat) | Python | orchestrates Sleuth Kit utilities |
-| `PartitionRecovery.py` | Partition recovery inspection (lsblk → fdisk → testdisk) | Python | orchestrates Linux forensic tools |
+| Q1 Fibonacci (recursive + non-recursive, complexity analysis) | `py1_Fibonacci.py` | `q1_Fibonacci.cpp` | recursion vs iteration, O(2^n) vs O(n) |
+| Q2 Huffman encoding (greedy) | `py2_HuffmanEncoding.py` | `q2_HuffmanEncoding.cpp` | min-heap merge tree, prefix codes |
+| Q3 Fractional Knapsack (greedy) | `py3_FractionalKnapsack.py` | `q3_FractionalKnapsack.cpp` | sort by value/weight ratio |
+| Q4 0/1 Knapsack (dynamic programming) | `py4_Knapsack01_DP.py` | `q4_Knapsack01_DP.cpp` | DP table + trace-back of items |
+| Q5 N-Queens (first queen placed) | `py5_NQueens.py` | `q5_NQueens.cpp` | backtracking |
+| Q6 Tower of Hanoi | `py6_TowerOfHanoi.py` | `q6_TowerOfHanoi.cpp` | recursion, 2^n - 1 moves |
 
-C++ programs build as above. Python prerequisites:
+Run any of them: `python3 "daa/py2_HuffmanEncoding.py"`
+or build the C++ twin:
+`g++ -std=c++17 -Wall -o bin/q2 "daa/q2_HuffmanEncoding.cpp" && ./bin/q2`
 
-```bash
-sudo apt install python3-pil sleuthkit testdisk   # Pillow + forensic tools
-```
+## IR — `ir/`
 
-### `ml/` — Machine Learning (Python)
+| Question | Python file | C++ file | Technique |
+| --- | --- | --- | --- |
+| Q1 Cosine similarity of two documents | `py1_CosineSimilarity.py` | `q1_CosineSimilarity.cpp` | word-frequency vectors, cosine |
+| Q2 Stop-word removal | `py2_StopWordRemoval.py` | `q2_StopWordRemoval.cpp` | tokenizing + hash-set filter |
+| Q3 MapReduce character counting | `py3_MapReduce.py` | `q3_MapReduce.cpp` | map, shuffle & sort, reduce |
+| Q4 PageRank | `py4_PageRank.py` | `q4_PageRank.cpp` | power iteration, damping 0.85 |
+| Q5 Topic-sensitive PageRank | `py5_TopicSensitivePageRank.py` | `q5_TopicSensitivePageRank.cpp` | XML graph, personalization vector, dangling-mass handling |
 
-Each script mirrors one notebook from the reference repository. Datasets
-are **not** included — download them yourself and place them in the working
-directory:
+Run any of them: `python3 "ir/py1_CosineSimilarity.py"`
+or build the C++ twin:
+`g++ -std=c++17 -Wall -o bin/q1 "ir/q1_CosineSimilarity.cpp" && ./bin/q1`
 
-| Script | Experiment | Dataset needed |
+## CSDF — `csdf/`
+
+| Question | Python file | Requirements |
 | --- | --- | --- |
-| `GradientDescent.py` | Gradient descent on f(x) = (x + 3)² | none (pure Python) |
-| `DiabetesKNN.py` | Diabetes classification with KNN (k = 5), scaling, all metrics | `diabetes.csv` |
-| `KNNandSVM.py` | Spam classification with TF-IDF + KNN vs linear SVM | `emails.csv` (`text`, `spam`) |
-| `UberRegression.py` | Uber fare prediction: cleaning, Haversine distance, IQR outliers, Linear vs Random Forest | `uber.csv` |
-| `ChurnNN.py` | Customer churn with a Keras network: base model vs dropout + early stopping | `Churn_Modelling.csv` (TensorFlow needed) |
+| Q1 CAPTCHA generation + verification | `py1_Captcha.py` | Pillow (`sudo apt install python3-pil`) |
+| Q2 Email header analysis | `py2_EmailHeaderAnalysis.py` | standard library only |
+| Q3 Log capture & event correlation | `py3_LogCapture_EventCorrelation.py` | standard library only (writes `system.log`) |
+| Q4 File recovery (dd → fls → istat → icat) | `py4_FileRecovery.py` | Sleuth Kit (`sudo apt install sleuthkit`) |
+| Q5 Partition recovery (fdisk → TestDisk) | `py5_PartitionRecovery.py` | TestDisk (`sudo apt install testdisk`) |
 
-Python prerequisites:
+Run any of them: `python3 "csdf/py2_EmailHeaderAnalysis.py"`
+
+## ML — `ml/`
+
+| Question | Python file | Dataset needed (in this directory) |
+| --- | --- | --- |
+| Q1 Uber fare prediction (preprocess, outliers, correlation, Linear + Random Forest, R2/RMSE) | `py1_UberRegression.py` | `uber.csv` |
+| Q2 Email spam classification (KNN + SVM with TF-IDF) | `py2_SpamKNN_SVM.py` | `emails.csv` |
+| Q3 Customer churn neural network (dropout + early stopping) | `py3_ChurnNN.py` | `Churn_Modelling.csv`, TensorFlow |
+| Q4 Gradient descent on y = (x+3)^2 | `py4_GradientDescent.py` | none |
+| Q5 Diabetes KNN (confusion matrix, accuracy, error rate, precision, recall) | `py5_DiabetesKNN.py` | `diabetes.csv` |
+
+Python packages:
 
 ```bash
-python3 -m pip install pandas numpy matplotlib seaborn scikit-learn
-python3 -m pip install tensorflow        # only for ChurnNN.py
-python3 "ml/DiabetesKNN.py"
+python3 -m pip install pandas scikit-learn matplotlib seaborn   # Q1, Q2, Q5
+python3 -m pip install tensorflow                               # Q3 only
 ```
 
-## Verified
-
-- All `daa/`, `ir/`, `csdf/` C++ files compile clean with
-  `g++ -std=c++17 -Wall` and were smoke-tested with valid input
-  (knapsack answers, Huffman round-trip, N=8 solution, PageRank ranks).
-- All Python scripts pass `python3 -m py_compile`.
-- The `prac1.cpp` … `prac6.cpp` files in `daa/` are an earlier, separate
-  set of attempts (Fibonacci, quicksort, …) kept for reference.
+Run any of them: `python3 "ml/py5_DiabetesKNN.py"`
 
 ## Safety note (forensics)
 
-`FileRecovery.py` and `PartitionRecovery.py` touch real block devices with
-`sudo`. Work only on media you own or are authorised to examine, double-check
-device paths, and never run write/repair operations inside TestDisk without a
-verified backup.
+`py4_FileRecovery.py` and `py5_PartitionRecovery.py` touch real block
+devices under `sudo`. Run only on media you own or are authorised to
+examine, double-check device paths, and never run write/repair operations
+inside TestDisk without a verified backup.
