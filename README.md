@@ -2,7 +2,8 @@
 
 Solutions to the LP-3 laboratory questions. **DAA and IR questions have
 both Python and C++ versions**; ML and CSDF are Python only (ML needs
-scikit-learn / TensorFlow, CSDF needs Pillow or Linux forensic tools).
+scikit-learn / TensorFlow; CSDF's forensic scripts need Linux tools —
+everything else runs on the bare standard library).
 
 ## Naming scheme (sorts .py before .cpp in every file explorer)
 
@@ -23,8 +24,10 @@ Style used in every file:
 - Every Python file is organised into numbered `STEP` sections:
   **STEP 1** imports, **STEP 2** creates the needed file/dataset from
   hardcoded data when one is required (ML scripts auto-create a small
-  demo CSV if the real Kaggle dataset is absent), later steps use and
-  process it. C++ programs need no files, so their data is embedded.
+  demo CSV if the real Kaggle dataset is absent — the demo CSVs have
+  **exactly the same columns as the real datasets**, so dropping the
+  real CSV in the folder works with no code change), later steps use
+  and process it. C++ programs need no files, so their data is embedded.
 
 ## Folder structure
 
@@ -68,7 +71,7 @@ or build the C++ twin:
 
 | Question | Python file | Requirements |
 | --- | --- | --- |
-| Q1 CAPTCHA generation + verification | `py1_Captcha.py` | Pillow (`sudo apt install python3-pil`) |
+| Q1 CAPTCHA generation + verification | `py1_Captcha.py` | none (pure stdlib — builds the PNG by hand) |
 | Q2 Email header analysis | `py2_EmailHeaderAnalysis.py` | standard library only |
 | Q3 Log capture & event correlation | `py3_LogCapture_EventCorrelation.py` | standard library only (writes `system.log`) |
 | Q4 File recovery (dd → fls → istat → icat) | `py4_FileRecovery.py` | Sleuth Kit (`sudo apt install sleuthkit`) |
@@ -81,7 +84,7 @@ Run any of them: `python3 "csdf/py2_EmailHeaderAnalysis.py"`
 | Question | Python file | Dataset needed (in this directory) |
 | --- | --- | --- |
 | Q1 Uber fare prediction (preprocess, outliers, correlation, Linear + Random Forest, R2/RMSE) | `py1_UberRegression.py` | `uber.csv` |
-| Q2 Email spam classification (KNN + SVM with TF-IDF) | `py2_SpamKNN_SVM.py` | `emails.csv` |
+| Q2 Email spam classification (KNN + SVM on the Kaggle word-count features) | `py2_SpamKNN_SVM.py` | `emails.csv` |
 | Q3 Customer churn neural network (dropout + early stopping) | `py3_ChurnNN.py` | `Churn_Modelling.csv`, TensorFlow |
 | Q4 Gradient descent on y = (x+3)^2 | `py4_GradientDescent.py` | none |
 | Q5 Diabetes KNN (confusion matrix, accuracy, error rate, precision, recall) | `py5_DiabetesKNN.py` | `diabetes.csv` |
@@ -89,9 +92,12 @@ Run any of them: `python3 "csdf/py2_EmailHeaderAnalysis.py"`
 Python packages:
 
 ```bash
-python3 -m pip install pandas scikit-learn matplotlib seaborn   # Q1, Q2, Q5
-python3 -m pip install tensorflow                               # Q3 only
+python3 -m pip install numpy pandas scikit-learn   # Q1, Q2, Q5
+python3 -m pip install tensorflow                  # Q3 only
 ```
+
+No other third-party packages are used anywhere — charts are rendered as
+ASCII art in the terminal and the CAPTCHA PNG is written by hand.
 
 Run any of them: `python3 "ml/py5_DiabetesKNN.py"`
 
