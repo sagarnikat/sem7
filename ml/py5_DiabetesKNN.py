@@ -19,6 +19,7 @@ COMMANDS (run from the repository root):
 # STEP 1 : IMPORTS
 # ============================================================
 import os
+import sys
 
 import pandas as pd
 from sklearn.metrics import (accuracy_score, confusion_matrix,
@@ -52,26 +53,50 @@ DEMO_DIABETES_CSV = """Pregnancies,Glucose,BloodPressure,SkinThickness,Insulin,B
 6,95,70,32,95,30.7,0.29,28,0
 """
 
-DATASET_FILE = "diabetes.csv"
+DATASET_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                            "diabetes.csv")
+
+
+def find_dataset():
+    """Return the CSV to use: ml/diabetes.csv first, then ./diabetes.csv."""
+    if os.path.exists(DATASET_FILE):
+        return DATASET_FILE
+    local = os.path.abspath("diabetes.csv")
+    if os.path.exists(local):
+        return local
+    return DATASET_FILE
 
 
 def ensure_dataset():
-    """Use the real CSV if present; otherwise create the demo CSV."""
-    if os.path.exists(DATASET_FILE):
-        print(f"Using existing {DATASET_FILE}")
-    else:
-        with open(DATASET_FILE, "w") as file:
-            file.write(DEMO_DIABETES_CSV)
-        print(f"Created demo {DATASET_FILE} from hardcoded sample data")
+    """Return the CSV to use; create the demo only when no file exists."""
+    path = find_dataset()
+    if os.path.exists(path):
+        print(f"Using dataset: {path}")
+        return path
+    with open(DATASET_FILE, "w", encoding="utf-8") as file:
+        file.write(DEMO_DIABETES_CSV)
+    print(f"No diabetes.csv found - created demo dataset: {DATASET_FILE}")
+    return DATASET_FILE
 
 
 # ============================================================
 # STEP 3 : USE THE FILE - read it, split into features/target
 # ============================================================
-def load_dataset():
+def load_dataset(path=None):
     """Read diabetes.csv; split into features X and target y (Outcome)."""
-    data = pd.read_csv(DATASET_FILE)
+    path = path or find_dataset()
+    data = pd.read_csv(path)
+    data.columns = [str(c).replace("\ufeff", "").strip()
+                    for c in data.columns]
 
+    if "Outcome" not in data.columns:
+        print("\nERROR: this CSV is not the expected Pima diabetes dataset.",
+              file=sys.stderr)
+        print(f"Columns found: {list(data.columns)}", file=sys.stderr)
+        print("Expected a final 'Outcome' (0/1) column.", file=sys.stderr)
+        raise SystemExit(1)
+
+    print(f"\nFile: {path}")
     print("Dataset:")
     print(data.head())
     return data.drop("Outcome", axis=1), data["Outcome"]
@@ -81,9 +106,22 @@ def load_dataset():
 # STEP 4 : SPLIT + NORMALIZE (fit the scaler on train only)
 # ============================================================
 def split_and_scale(X, y):
-    """80/20 stratified split + StandardScaler (fit train only)."""
+    """80/20 stratified split + zero-imputation + StandardScaler."""
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.20, random_state=42, stratify=y)
+
+    # In the Pima dataset a 0 for these measurements means "not recorded",
+    # not a real value. Replace it with the training median (fit on train
+    # only, so no information leaks from the test set).
+    X_train = X_train.copy()
+    X_test = X_test.copy()
+    for column in ["Glucose", "BloodPressure", "SkinThickness", "Insulin",
+                   "BMI"]:
+        if column not in X_train.columns:
+            continue
+        median = X_train.loc[X_train[column] > 0, column].median()
+        X_train[column] = X_train[column].replace(0, median)
+        X_test[column] = X_test[column].replace(0, median)
 
     scaler = StandardScaler()
     X_train = scaler.fit_transform(X_train)
@@ -127,8 +165,8 @@ def evaluate(y_test, y_pred):
 # STEP 7 : DRIVER - create file -> load -> split/scale -> KNN
 # ============================================================
 def run():
-    ensure_dataset()                                  # STEP 2
-    X, y = load_dataset()                             # STEP 3
+    path = ensure_dataset()                           # STEP 2
+    X, y = load_dataset(path)                         # STEP 3
     X_train, X_test, y_train, y_test = split_and_scale(X, y)   # STEP 4
     y_pred = train_and_predict(X_train, X_test, y_train)       # STEP 5
     evaluate(y_test, y_pred)                          # STEP 6

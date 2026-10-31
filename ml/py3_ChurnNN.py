@@ -21,6 +21,7 @@ COMMANDS (run from the repository root):
 # STEP 1 : IMPORTS
 # ============================================================
 import os
+import sys
 
 import pandas as pd
 from sklearn.metrics import accuracy_score, confusion_matrix
@@ -55,31 +56,58 @@ DEMO_CHURN_CSV = """RowNumber,CustomerId,Surname,CreditScore,Geography,Gender,Ag
 16,15691973,Chu,501,Spain,Male,41,6,0.00,1,1,0,51419.18,0
 """
 
-DATASET_FILE = "Churn_Modelling.csv"
+DATASET_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                            "Churn_Modelling.csv")
+
+
+def find_dataset():
+    """Return the CSV to use: ml/Churn_Modelling.csv first, then ./..."""
+    if os.path.exists(DATASET_FILE):
+        return DATASET_FILE
+    local = os.path.abspath("Churn_Modelling.csv")
+    if os.path.exists(local):
+        return local
+    return DATASET_FILE
 
 
 def ensure_dataset():
-    """Use the real CSV if present; otherwise create the demo CSV."""
-    if os.path.exists(DATASET_FILE):
-        print(f"Using existing {DATASET_FILE}")
-    else:
-        with open(DATASET_FILE, "w") as file:
-            file.write(DEMO_CHURN_CSV)
-        print(f"Created demo {DATASET_FILE} from hardcoded sample data")
+    """Return the CSV to use; create the demo only when no file exists."""
+    path = find_dataset()
+    if os.path.exists(path):
+        print(f"Using dataset: {path}")
+        return path
+    with open(DATASET_FILE, "w", encoding="utf-8") as file:
+        file.write(DEMO_CHURN_CSV)
+    print(f"No Churn_Modelling.csv found - created demo: {DATASET_FILE}")
+    return DATASET_FILE
 
 
 # ============================================================
 # STEP 3 : USE THE FILE - read it, distinguish features/target,
 #          one-hot encode, split into train and test sets
 # ============================================================
-def load_dataset():
+def load_dataset(path=None):
     """Read the CSV and drop the three pure identifier columns."""
-    data = pd.read_csv(DATASET_FILE)
+    path = path or find_dataset()
+    data = pd.read_csv(path)
+    data.columns = [str(c).replace("\ufeff", "").strip()
+                    for c in data.columns]
 
+    missing = [name for name in ("Exited", "Geography", "Gender")
+               if name not in data.columns]
+    if missing:
+        print("\nERROR: this CSV is not the expected bank churn dataset.",
+              file=sys.stderr)
+        print(f"Missing required column(s): {missing}", file=sys.stderr)
+        print(f"Columns found: {list(data.columns)}", file=sys.stderr)
+        raise SystemExit(1)
+
+    print(f"\nFile: {path}")
     print("Dataset Shape:", data.shape)
     print(data.head())
 
-    data = data.drop(["RowNumber", "CustomerId", "Surname"], axis=1)
+    data = data.drop(["RowNumber", "CustomerId", "Surname"], axis=1,
+                     errors="ignore")
     return data
 
 
@@ -172,8 +200,8 @@ def evaluate(y_test, y_pred, label):
 # STEP 8 : DRIVER - chain steps 2-7 together
 # ============================================================
 def run():
-    ensure_dataset()                                  # STEP 2
-    data = load_dataset()                             # STEP 3
+    path = ensure_dataset()                           # STEP 2
+    data = load_dataset(path)                         # STEP 3
     X_train, X_test, y_train, y_test = split_dataset(data)
     X_train, X_test = scale_data(X_train, X_test)     # STEP 4
 

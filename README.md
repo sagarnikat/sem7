@@ -51,7 +51,7 @@ ml/    Machine Learning                   (Python only)
 
 Run any of them: `python3 "daa/py2_HuffmanEncoding.py"`
 or build the C++ twin:
-`g++ -std=c++17 -Wall -o bin/q2 "daa/q2_HuffmanEncoding.cpp" && ./bin/q2`
+`mkdir -p bin && g++ -std=c++17 -Wall -o bin/q2 "daa/q2_HuffmanEncoding.cpp" && ./bin/q2`
 
 ## BT — `bt/`
 
@@ -77,6 +77,11 @@ Optional local compile: `npm install -g solc && solcjs --bin bt/03_BankAccount.s
 | Q3 Customer churn neural network (dropout + early stopping) | `py3_ChurnNN.py` | `Churn_Modelling.csv`, TensorFlow |
 | Q4 Gradient descent on y = (x+3)^2 | `py4_GradientDescent.py` | none |
 | Q5 Diabetes KNN (confusion matrix, accuracy, error rate, precision, recall) | `py5_DiabetesKNN.py` | `diabetes.csv` |
+
+All ML scripts read their CSV from **`ml/`** whether you run them from the
+repo root or from inside `ml/`. If the expected file is absent they write a
+small demo CSV there; if a real file is missing required columns they print
+the missing names instead of failing with a `KeyError`.
 
 Python packages:
 
