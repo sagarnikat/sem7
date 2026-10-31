@@ -1,9 +1,10 @@
 # LP-3 Practical Solutions (Python / C++)
 
-Solutions to the LP-3 laboratory questions. **DAA and IR questions have
-both Python and C++ versions**; ML and CSDF are Python only (ML needs
-scikit-learn / TensorFlow; CSDF's forensic scripts need Linux tools —
-everything else runs on the bare standard library).
+Solutions to the LP-3 laboratory questions. **DAA questions have both
+Python and C++ versions**; ML is Python only (it needs
+scikit-learn / TensorFlow); BT contains Solidity contracts deployed with
+Remix + MetaMask on a free testnet. Everything else runs on the bare
+standard library.
 
 ## Naming scheme (sorts .py before .cpp in every file explorer)
 
@@ -33,8 +34,7 @@ Style used in every file:
 
 ```
 daa/   Design & Analysis of Algorithms   (.py + .cpp)
-ir/    Information Retrieval             (.py + .cpp)
-csdf/  Cyber Security & Digital Forensics (Python only)
+bt/    Blockchain Technology              (.sol + instructions)
 ml/    Machine Learning                   (Python only)
 ```
 
@@ -53,31 +53,20 @@ Run any of them: `python3 "daa/py2_HuffmanEncoding.py"`
 or build the C++ twin:
 `g++ -std=c++17 -Wall -o bin/q2 "daa/q2_HuffmanEncoding.cpp" && ./bin/q2`
 
-## IR — `ir/`
+## BT — `bt/`
 
-| Question | Python file | C++ file | Technique |
-| --- | --- | --- | --- |
-| Q1 Cosine similarity of two documents | `py1_CosineSimilarity.py` | `q1_CosineSimilarity.cpp` | word-frequency vectors, cosine |
-| Q2 Stop-word removal | `py2_StopWordRemoval.py` | `q2_StopWordRemoval.cpp` | tokenizing + hash-set filter |
-| Q3 MapReduce character counting | `py3_MapReduce.py` | `q3_MapReduce.cpp` | map, shuffle & sort, reduce |
-| Q4 PageRank | `py4_PageRank.py` | `q4_PageRank.cpp` | power iteration, damping 0.85 |
-| Q5 Topic-sensitive PageRank | `py5_TopicSensitivePageRank.py` | `q5_TopicSensitivePageRank.cpp` | XML graph, personalization vector, dangling-mass handling |
-
-Run any of them: `python3 "ir/py1_CosineSimilarity.py"`
-or build the C++ twin:
-`g++ -std=c++17 -Wall -o bin/q1 "ir/q1_CosineSimilarity.cpp" && ./bin/q1`
-
-## CSDF — `csdf/`
-
-| Question | Python file | Requirements |
+| Practical | File | Type |
 | --- | --- | --- |
-| Q1 CAPTCHA generation + verification | `py1_Captcha.py` | none (pure stdlib — builds the PNG by hand) |
-| Q2 Email header analysis | `py2_EmailHeaderAnalysis.py` | standard library only |
-| Q3 Log capture & event correlation | `py3_LogCapture_EventCorrelation.py` | standard library only (writes `system.log`) |
-| Q4 File recovery (dd → fls → istat → icat) | `py4_FileRecovery.py` | Sleuth Kit (`sudo apt install sleuthkit`) |
-| Q5 Partition recovery (fdisk → TestDisk) | `py5_PartitionRecovery.py` | TestDisk (`sudo apt install testdisk`) |
+| 1. Install MetaMask | `01_MetaMaskInstallation.md` | instructions |
+| 2. Create a wallet with MetaMask | `02_CreateWallet.md` | instructions |
+| 3. Smart contract for a bank account | `03_BankAccount.sol` | Solidity |
+| 4. Smart contract with fallback + receive | `04_BankWithFallback.sol` | Solidity |
+| 5. Survey report / real-time use cases | `05_SurveyReport.md` | report |
 
-Run any of them: `python3 "csdf/py2_EmailHeaderAnalysis.py"`
+Deploy the contracts on the free **Sepolia testnet** with
+[Remix IDE](https://remix.ethereum.org) and MetaMask — no toolchain needed.
+Full steps, test cases and viva questions: [`bt/README.md`](bt/README.md).
+Optional local compile: `npm install -g solc && solcjs --bin bt/03_BankAccount.sol`.
 
 ## ML — `ml/`
 
@@ -97,13 +86,6 @@ python3 -m pip install tensorflow                  # Q3 only
 ```
 
 No other third-party packages are used anywhere — charts are rendered as
-ASCII art in the terminal and the CAPTCHA PNG is written by hand.
+ASCII art in the terminal.
 
 Run any of them: `python3 "ml/py5_DiabetesKNN.py"`
-
-## Safety note (forensics)
-
-`py4_FileRecovery.py` and `py5_PartitionRecovery.py` touch real block
-devices under `sudo`. Run only on media you own or are authorised to
-examine, double-check device paths, and never run write/repair operations
-inside TestDisk without a verified backup.
