@@ -6,20 +6,17 @@
  * not at all - no fractions) so that the total value is maximum and the total
  * weight does not exceed W.
  *
- * HOW IT WORKS (BOTTOM-UP DYNAMIC PROGRAMMING):
- *   1. Build a table dp[i][w] = maximum value achievable using only the first
- *      i items and a knapsack capacity of w.
- *   2. Recurrence for every item i and every capacity w:
- *        dp[i][w] = dp[i-1][w]                                (skip item i)
- *        dp[i][w] = max(dp[i][w], value[i] + dp[i-1][w - weight[i]])
- *                                                             (take item i)
- *   3. dp[n][W] is the answer (best value with all items and full capacity).
- *   4. To find WHICH items were chosen, walk the table backwards:
- *      if dp[i][w] != dp[i-1][w], item i was taken; jump to dp[i-1][w-weight[i]].
+ * HOW IT WORKS (TOP-DOWN DYNAMIC PROGRAMMING):
+ *   1. Define solve(i, w) as the maximum value achievable using the first i
+ *      items and a knapsack capacity of w.
+ *   2. Recursively consider skipping item i or taking it when it fits, then
+ *      memoize the result so each (i, w) state is solved only once.
+ *   3. solve(n, W) is the answer. The memo table is also used to trace the
+ *      chosen items backwards.
  *
  * COMPLEXITY:
- *   - Time  : O(n * W)  (pseudo-polynomial; fills the whole table once)
- *   - Space : O(n * W)  (full table kept so the selected items can be traced)
+ *   - Time  : O(n * W)  (pseudo-polynomial; each state is solved once)
+ *   - Space : O(n * W)  (memo table plus O(n) recursion depth)
  *
  * NOTES / INFO:
  *   - Greedy does NOT work here (a high-ratio item may block several small
@@ -32,6 +29,7 @@
  *   compile and run      : g++ -std=c++17 -Wall q4_Knapsack01_DP.cpp -o q4_Knapsack01_DP && ./q4_Knapsack01_DP
 */
 
+#include <algorithm>
 #include <iostream>
 #include <vector>
 
@@ -47,33 +45,34 @@ void readItems(int itemCount, vector<long long>& value, vector<int>& weight) {
     }
 }
 
-long long buildTable(const vector<long long>& value, const vector<int>& weight,
-                     vector<vector<long long>>& dp, int itemCount, int capacity) {
-    for (int i = 1; i <= itemCount; ++i) {
-        for (int w = 0; w <= capacity; ++w) {
-            if (weight[i - 1] <= w) {
+long long solveKnapsack(const vector<long long>& value,
+                        const vector<int>& weight,
+                        vector<vector<long long>>& memo,
+                        int itemCount, int capacity) {
+    if (itemCount == 0) return 0;
+    if (memo[itemCount][capacity] != -1) return memo[itemCount][capacity];
 
-                long long without = dp[i - 1][w];
-
-                long long with_ = value[i - 1] + dp[i - 1][w - weight[i - 1]];
-                dp[i][w] = max(without, with_);
-            } else {
-
-                dp[i][w] = dp[i - 1][w];
-            }
-        }
+    long long best = solveKnapsack(value, weight, memo, itemCount - 1, capacity);
+    if (weight[itemCount - 1] <= capacity) {
+        long long withItem = value[itemCount - 1] +
+                             solveKnapsack(value, weight, memo, itemCount - 1,
+                                           capacity - weight[itemCount - 1]);
+        best = max(best, withItem);
     }
-    return dp[itemCount][capacity];
+
+    memo[itemCount][capacity] = best;
+    return best;
 }
 
 void printSelectedItems(const vector<long long>& value, const vector<int>& weight,
-                        const vector<vector<long long>>& dp, int itemCount,
+                        vector<vector<long long>>& memo, int itemCount,
                         int capacity) {
     cout << "Selected items:\n";
     int w = capacity;
     for (int i = itemCount; i > 0; --i) {
-
-        if (dp[i][w] != dp[i - 1][w]) {
+        long long withItems = solveKnapsack(value, weight, memo, i, w);
+        long long withoutItem = solveKnapsack(value, weight, memo, i - 1, w);
+        if (withItems != withoutItem) {
             cout << "Item " << i << " (value=" << value[i - 1]
                  << ", weight=" << weight[i - 1] << ")\n";
             w -= weight[i - 1];
@@ -94,13 +93,13 @@ void run() {
     cout << "Enter knapsack capacity: ";
     cin >> capacity;
 
-    vector<vector<long long>> dp(itemCount + 1,
-                                 vector<long long>(capacity + 1, 0));
+    vector<vector<long long>> memo(itemCount + 1,
+                                   vector<long long>(capacity + 1, -1));
 
-    long long maxValue = buildTable(value, weight, dp, itemCount, capacity);
+    long long maxValue = solveKnapsack(value, weight, memo, itemCount, capacity);
 
     cout << "\nMaximum value = " << maxValue << "\n";
-    printSelectedItems(value, weight, dp, itemCount, capacity);
+    printSelectedItems(value, weight, memo, itemCount, capacity);
 }
 
 int main() {
