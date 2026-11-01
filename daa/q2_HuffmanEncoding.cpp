@@ -43,6 +43,7 @@
 */
 
 #include <iostream>
+#include <map>
 #include <queue>
 #include <string>
 #include <unordered_map>
@@ -78,6 +79,20 @@ unordered_map<char, int> countFrequencies(const string& text) {
     unordered_map<char, int> freq;
     for (char c : text) freq[c]++;
     return freq;
+}
+
+void displayFrequencies(const string& text) {
+    map<char, int> frequencies;
+    for (char ch : text) frequencies[ch]++;
+
+    cout << "\nCharacter Frequencies:\n";
+    for (const auto& [ch, count] : frequencies) {
+        if (ch == ' ') cout << "[space]";
+        else if (ch == '\t') cout << "[tab]";
+        else cout << ch;
+
+        cout << " appeared " << count << (count == 1 ? " time\n" : " times\n");
+    }
 }
 
 void generateCodes(Node* node, string code) {
@@ -152,6 +167,7 @@ void run() {
         return;
     }
 
+    displayFrequencies(text);
     buildTree(text);
 
     int choice;
