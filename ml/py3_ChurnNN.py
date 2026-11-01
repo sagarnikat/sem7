@@ -179,8 +179,9 @@ print("  generalise better than the baseline on the test set.")
 # %% Step 12: Plots with matplotlib
 import matplotlib.pyplot as plt
 
-fig, axes = plt.subplots(1, 2, figsize=(12, 4.5))
-for axis, metric in zip(axes, ["accuracy", "loss"]):
+# Plots 1 and 2: training history metrics, each in its own figure.
+for metric in ["accuracy", "loss"]:
+    fig, axis = plt.subplots(figsize=(7, 5))
     axis.plot(initial_history.history[metric], label="baseline train")
     axis.plot(initial_history.history[f"val_{metric}"],
               "--", label="baseline validation")
@@ -192,14 +193,13 @@ for axis, metric in zip(axes, ["accuracy", "loss"]):
     axis.set_ylabel(metric.capitalize())
     axis.grid(alpha=0.3)
     axis.legend(fontsize=8)
-fig.suptitle("Training history: baseline vs improved model")
-fig.tight_layout()
-plt.show()
+    fig.tight_layout()
+    plt.show()
 
-fig, axes = plt.subplots(1, 2, figsize=(10, 4))
-for axis, name, prediction in [(axes[0], "Baseline", y_base),
-                               (axes[1], "Improved", y_pred)]:
+# Plots 3 and 4: one separate confusion matrix for each model.
+for name, prediction in [("Baseline", y_base), ("Improved", y_pred)]:
     matrix = confusion_matrix(y_test, prediction)
+    fig, axis = plt.subplots(figsize=(6, 5))
     image = axis.imshow(matrix, cmap="Blues")
     for row in range(matrix.shape[0]):
         for column in range(matrix.shape[1]):
@@ -207,12 +207,11 @@ for axis, name, prediction in [(axes[0], "Baseline", y_base),
                       va="center",
                       color="white" if matrix[row, column] > matrix.max() / 2
                       else "black")
-    axis.set_title(f"{name} model")
+    axis.set_title(f"{name} model confusion matrix")
     axis.set_xlabel("Predicted (0 = stays, 1 = churns)")
     axis.set_ylabel("Actual (0 = stays, 1 = churns)")
     axis.set_xticks([0, 1])
     axis.set_yticks([0, 1])
     fig.colorbar(image, ax=axis, shrink=0.8)
-fig.suptitle("Churn confusion matrices")
-fig.tight_layout()
-plt.show()
+    fig.tight_layout()
+    plt.show()

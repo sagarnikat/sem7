@@ -176,22 +176,28 @@ import matplotlib.pyplot as plt
 
 sample = df.sample(min(5000, len(df)), random_state=42)
 
-fig, axes = plt.subplots(1, 2, figsize=(12, 4.5))
-axes[0].scatter(sample["distance_km"], sample["fare_amount"],
-                s=8, alpha=0.4, color="tab:blue")
-axes[0].set_title("Trip distance vs fare")
-axes[0].set_xlabel("Distance (km)")
-axes[0].set_ylabel("Fare amount ($)")
-axes[0].grid(alpha=0.3)
-
-axes[1].hist(df["fare_amount"], bins=40, color="tab:green", edgecolor="white")
-axes[1].set_title("Fare amount distribution")
-axes[1].set_xlabel("Fare amount ($)")
-axes[1].set_ylabel("Number of trips")
-axes[1].grid(alpha=0.3)
+# Plot 1: relationship between trip distance and fare.
+fig, axis = plt.subplots(figsize=(7, 5))
+axis.scatter(sample["distance_km"], sample["fare_amount"],
+             s=8, alpha=0.4, color="tab:blue")
+axis.set_title("Trip distance vs fare")
+axis.set_xlabel("Distance (km)")
+axis.set_ylabel("Fare amount ($)")
+axis.grid(alpha=0.3)
 fig.tight_layout()
 plt.show()
 
+# Plot 2: distribution of fare amounts.
+fig, axis = plt.subplots(figsize=(7, 5))
+axis.hist(df["fare_amount"], bins=40, color="tab:green", edgecolor="white")
+axis.set_title("Fare amount distribution")
+axis.set_xlabel("Fare amount ($)")
+axis.set_ylabel("Number of trips")
+axis.grid(alpha=0.3)
+fig.tight_layout()
+plt.show()
+
+# Plot 3: feature correlations.
 fig, axis = plt.subplots(figsize=(8, 6.5))
 image = axis.imshow(correlation, cmap="coolwarm", vmin=-1, vmax=1)
 axis.set_xticks(range(len(columns)))
@@ -209,19 +215,30 @@ fig.colorbar(image, ax=axis, shrink=0.8)
 fig.tight_layout()
 plt.show()
 
-fig, axes = plt.subplots(1, 2, figsize=(12, 4.5), sharex=True, sharey=True)
-for axis, name, prediction in [
-        (axes[0], "Linear Regression", linear_prediction),
-        (axes[1], "Random Forest", rf_prediction)]:
-    axis.scatter(y_test, prediction, s=8, alpha=0.4, color="tab:blue")
-    limit = [min(y_test.min(), prediction.min()),
-             max(y_test.max(), prediction.max())]
-    axis.plot(limit, limit, "r--", linewidth=1, label="perfect prediction")
-    axis.set_title(name)
-    axis.set_xlabel("Actual fare ($)")
-    axis.set_ylabel("Predicted fare ($)")
-    axis.grid(alpha=0.3)
-    axis.legend()
-fig.suptitle("Actual vs predicted fare")
+# Plot 4: linear regression predictions against actual fares.
+fig, axis = plt.subplots(figsize=(7, 5))
+axis.scatter(y_test, linear_prediction, s=8, alpha=0.4, color="tab:blue")
+limit = [min(y_test.min(), linear_prediction.min()),
+         max(y_test.max(), linear_prediction.max())]
+axis.plot(limit, limit, "r--", linewidth=1, label="perfect prediction")
+axis.set_title("Linear Regression: actual vs predicted fare")
+axis.set_xlabel("Actual fare ($)")
+axis.set_ylabel("Predicted fare ($)")
+axis.grid(alpha=0.3)
+axis.legend()
+fig.tight_layout()
+plt.show()
+
+# Plot 5: random forest predictions against actual fares.
+fig, axis = plt.subplots(figsize=(7, 5))
+axis.scatter(y_test, rf_prediction, s=8, alpha=0.4, color="tab:blue")
+limit = [min(y_test.min(), rf_prediction.min()),
+         max(y_test.max(), rf_prediction.max())]
+axis.plot(limit, limit, "r--", linewidth=1, label="perfect prediction")
+axis.set_title("Random Forest: actual vs predicted fare")
+axis.set_xlabel("Actual fare ($)")
+axis.set_ylabel("Predicted fare ($)")
+axis.grid(alpha=0.3)
+axis.legend()
 fig.tight_layout()
 plt.show()

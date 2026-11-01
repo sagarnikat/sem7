@@ -13,3 +13,4 @@ node_modules/
 
 *.ipynb
 a.out
+*.txt

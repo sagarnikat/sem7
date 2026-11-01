@@ -141,12 +141,12 @@ print("  feature matrix better, while KNN is simpler but slower to predict.")
 
 # %% Step 9: Plots with matplotlib
 import matplotlib.pyplot as plt
+# Plots 1 and 2: one separate confusion matrix for each classifier.
 from sklearn.metrics import confusion_matrix
 
-fig, axes = plt.subplots(1, 2, figsize=(10, 4))
-for axis, name, prediction in [(axes[0], "KNN", knn_prediction),
-                               (axes[1], "SVM", svm_prediction)]:
+for name, prediction in [("KNN", knn_prediction), ("SVM", svm_prediction)]:
     matrix = confusion_matrix(y_test, prediction)
+    fig, axis = plt.subplots(figsize=(6, 5))
     image = axis.imshow(matrix, cmap="Blues")
     for row in range(matrix.shape[0]):
         for column in range(matrix.shape[1]):
@@ -160,9 +160,10 @@ for axis, name, prediction in [(axes[0], "KNN", knn_prediction),
     axis.set_xticks([0, 1])
     axis.set_yticks([0, 1])
     fig.colorbar(image, ax=axis, shrink=0.8)
-fig.tight_layout()
-plt.show()
+    fig.tight_layout()
+    plt.show()
 
+# Plot 3: compare classification metrics for KNN and SVM.
 metrics = ["Accuracy", "Precision", "Recall", "F1"]
 width = 0.35
 

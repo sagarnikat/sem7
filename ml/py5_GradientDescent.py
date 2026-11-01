@@ -82,35 +82,38 @@ print("  large learning rate makes the updates overshoot and diverge.")
 # %% Step 8: Plots with matplotlib
 import matplotlib.pyplot as plt
 
-# Plot 1 (left panel): the parabola with every step of the descent drawn on it.
+# Plot 1: the parabola with every step of the descent drawn on it.
 xs = [point[0] for point in descent_path]
 ys = [point[1] for point in descent_path]
 curve_x = [(-6 + i * 0.01) for i in range(901)]
 curve_y = [f(value) for value in curve_x]
 
-fig, axes = plt.subplots(1, 2, figsize=(12, 4.5))
-axes[0].plot(curve_x, curve_y, color="tab:gray", label="f(x) = (x + 3)^2")
-axes[0].plot(xs, ys, "o-", color="tab:red", markersize=4,
-             linewidth=1, label="descent steps")
-axes[0].plot(x_start, f(x_start), "go", markersize=8, label="start (x = 2)")
-axes[0].plot(x_min, f(x_min), "b*", markersize=14, label="minimum found")
-axes[0].set_title(f"Gradient descent, learning rate = {learning_rate}")
-axes[0].set_xlabel("x")
-axes[0].set_ylabel("f(x)")
-axes[0].axis([-6, 3, -2, 30])
-axes[0].grid(alpha=0.3)
-axes[0].legend(fontsize=8)
+fig, axis = plt.subplots(figsize=(7, 5))
+axis.plot(curve_x, curve_y, color="tab:gray", label="f(x) = (x + 3)^2")
+axis.plot(xs, ys, "o-", color="tab:red", markersize=4,
+          linewidth=1, label="descent steps")
+axis.plot(x_start, f(x_start), "go", markersize=8, label="start (x = 2)")
+axis.plot(x_min, f(x_min), "b*", markersize=14, label="minimum found")
+axis.set_title(f"Gradient descent, learning rate = {learning_rate}")
+axis.set_xlabel("x")
+axis.set_ylabel("f(x)")
+axis.axis([-6, 3, -2, 30])
+axis.grid(alpha=0.3)
+axis.legend(fontsize=8)
+fig.tight_layout()
+plt.show()
 
-# Plot 2 (right panel): convergence speed for different learning rates.
+# Plot 2: convergence speed for different learning rates.
+fig, axis = plt.subplots(figsize=(7, 5))
 for rate in [0.01, 0.1, 0.5, 0.9, 1.0]:
     _, path = gradient_descent(x_start, rate, iterations, verbose_every=1000)
-    axes[1].plot([value for _, value in path], label=f"lr = {rate}")
+    axis.plot([value for _, value in path], label=f"lr = {rate}")
 
-axes[1].set_title("Convergence for different learning rates")
-axes[1].set_xlabel("Iteration")
-axes[1].set_ylabel("f(x)")
-axes[1].set_yscale("log")
-axes[1].grid(alpha=0.3)
-axes[1].legend(fontsize=8)
+axis.set_title("Convergence for different learning rates")
+axis.set_xlabel("Iteration")
+axis.set_ylabel("f(x)")
+axis.set_yscale("log")
+axis.grid(alpha=0.3)
+axis.legend(fontsize=8)
 fig.tight_layout()
 plt.show()

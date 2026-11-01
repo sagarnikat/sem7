@@ -134,31 +134,39 @@ print("  are diabetic; recall shows how many real diabetics were found.")
 # %% Step 8: Plots with matplotlib
 import matplotlib.pyplot as plt
 
-fig, axes = plt.subplots(1, 3, figsize=(15, 4.5))
-
-image = axes[0].imshow(cm, cmap="Blues")
+# Plot 1: confusion matrix for the trained KNN classifier.
+fig, axis = plt.subplots(figsize=(6, 5))
+image = axis.imshow(cm, cmap="Blues")
 for row in range(cm.shape[0]):
     for column in range(cm.shape[1]):
-        axes[0].text(column, row, cm[row, column], ha="center", va="center",
-                     color="white" if cm[row, column] > cm.max() / 2
-                     else "black")
-axes[0].set_title("Confusion matrix")
-axes[0].set_xlabel("Predicted (0 = healthy, 1 = diabetic)")
-axes[0].set_ylabel("Actual (0 = healthy, 1 = diabetic)")
-axes[0].set_xticks([0, 1])
-axes[0].set_yticks([0, 1])
-fig.colorbar(image, ax=axes[0], shrink=0.8)
+        axis.text(column, row, cm[row, column], ha="center", va="center",
+                  color="white" if cm[row, column] > cm.max() / 2
+                  else "black")
+axis.set_title("Confusion matrix")
+axis.set_xlabel("Predicted (0 = healthy, 1 = diabetic)")
+axis.set_ylabel("Actual (0 = healthy, 1 = diabetic)")
+axis.set_xticks([0, 1])
+axis.set_yticks([0, 1])
+fig.colorbar(image, ax=axis, shrink=0.8)
+fig.tight_layout()
+plt.show()
 
+# Plot 2: evaluation metrics for the trained KNN classifier.
+fig, axis = plt.subplots(figsize=(7, 5))
 names = ["Accuracy", "Error rate", "Precision", "Recall"]
 values = [accuracy, error_rate, precision, recall]
-bars = axes[1].bar(names, values, color=["tab:green", "tab:red",
-                                        "tab:blue", "tab:orange"])
-axes[1].bar_label(bars, fmt="%.3f", fontsize=8)
-axes[1].set_ylim(0, 1.1)
-axes[1].set_title("KNN evaluation metrics")
-axes[1].set_ylabel("Score")
-axes[1].grid(axis="y", alpha=0.3)
+bars = axis.bar(names, values, color=["tab:green", "tab:red",
+                                      "tab:blue", "tab:orange"])
+axis.bar_label(bars, fmt="%.3f", fontsize=8)
+axis.set_ylim(0, 1.1)
+axis.set_title("KNN evaluation metrics")
+axis.set_ylabel("Score")
+axis.grid(axis="y", alpha=0.3)
+fig.tight_layout()
+plt.show()
 
+# Plot 3: test accuracy for each number of neighbors.
+fig, axis = plt.subplots(figsize=(7, 5))
 neighbours = list(range(1, 11))
 scores = []
 for k in neighbours:
@@ -166,15 +174,14 @@ for k in neighbours:
     model.fit(X_train, y_train)
     scores.append(accuracy_score(y_test, model.predict(X_test)))
 
-axes[2].plot(neighbours, scores, "o-", color="tab:purple")
+axis.plot(neighbours, scores, "o-", color="tab:purple")
 best_k = neighbours[scores.index(max(scores))]
-axes[2].axvline(best_k, color="tab:red", linestyle="--",
-                label=f"best k = {best_k}")
-axes[2].set_title("Accuracy vs number of neighbours")
-axes[2].set_xlabel("k")
-axes[2].set_ylabel("Test accuracy")
-axes[2].grid(alpha=0.3)
-axes[2].legend(fontsize=8)
-fig.suptitle("Diabetes prediction with K-Nearest Neighbors")
+axis.axvline(best_k, color="tab:red", linestyle="--",
+             label=f"best k = {best_k}")
+axis.set_title("Accuracy vs number of neighbours")
+axis.set_xlabel("k")
+axis.set_ylabel("Test accuracy")
+axis.grid(alpha=0.3)
+axis.legend(fontsize=8)
 fig.tight_layout()
 plt.show()
