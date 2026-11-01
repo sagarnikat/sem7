@@ -37,7 +37,6 @@
 
 using namespace std;
 
-// Read all item values and weights from standard input.
 void readItems(int itemCount, vector<long long>& value, vector<int>& weight) {
     cout << "Enter value and weight of each item:\n";
     for (int i = 0; i < itemCount; ++i) {
@@ -48,19 +47,18 @@ void readItems(int itemCount, vector<long long>& value, vector<int>& weight) {
     }
 }
 
-// Fill the DP table and return dp[n][capacity] (the maximum value).
 long long buildTable(const vector<long long>& value, const vector<int>& weight,
                      vector<vector<long long>>& dp, int itemCount, int capacity) {
     for (int i = 1; i <= itemCount; ++i) {
         for (int w = 0; w <= capacity; ++w) {
             if (weight[i - 1] <= w) {
-                // Option A: keep the best without item i.
+
                 long long without = dp[i - 1][w];
-                // Option B: take item i (its weight must come out of w first).
+
                 long long with_ = value[i - 1] + dp[i - 1][w - weight[i - 1]];
                 dp[i][w] = max(without, with_);
             } else {
-                // Item i is too heavy for capacity w: cannot take it.
+
                 dp[i][w] = dp[i - 1][w];
             }
         }
@@ -68,23 +66,21 @@ long long buildTable(const vector<long long>& value, const vector<int>& weight,
     return dp[itemCount][capacity];
 }
 
-// Walk the table backwards and print the indices of the selected items.
 void printSelectedItems(const vector<long long>& value, const vector<int>& weight,
                         const vector<vector<long long>>& dp, int itemCount,
                         int capacity) {
     cout << "Selected items:\n";
     int w = capacity;
     for (int i = itemCount; i > 0; --i) {
-        // Value changed between row i-1 and row i => item i was taken.
+
         if (dp[i][w] != dp[i - 1][w]) {
             cout << "Item " << i << " (value=" << value[i - 1]
                  << ", weight=" << weight[i - 1] << ")\n";
-            w -= weight[i - 1];  // free the space the item occupied
+            w -= weight[i - 1];
         }
     }
 }
 
-// Drives the whole practical; main() only calls this.
 void run() {
     int itemCount;
     cout << "Enter number of items: ";
@@ -98,7 +94,6 @@ void run() {
     cout << "Enter knapsack capacity: ";
     cin >> capacity;
 
-    // dp[i][w] has n+1 rows (0 items ... n items) and W+1 columns (0 ... W).
     vector<vector<long long>> dp(itemCount + 1,
                                  vector<long long>(capacity + 1, 0));
 

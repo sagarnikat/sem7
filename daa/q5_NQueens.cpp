@@ -40,45 +40,38 @@
 
 using namespace std;
 
-int g_n = 0;                      // board size entered by the user
-vector<vector<int>> g_board;      // g_board[r][c] = 1 if a queen is there
+int g_n = 0;
+vector<vector<int>> g_board;
 
-// Check whether column `col` of `row` is safe against the queens placed in
-// the rows above (only "above" matters: rows below are still empty).
 bool isSafe(int row, int col) {
-    // 1. Column check: any queen already in this column?
+
     for (int r = 0; r < row; ++r)
         if (g_board[r][col]) return false;
 
-    // 2. Upper-left diagonal ("\" direction going up-left).
     for (int r = row - 1, c = col - 1; r >= 0 && c >= 0; --r, --c)
         if (g_board[r][c]) return false;
 
-    // 3. Upper-right diagonal ("/" direction going up-right).
     for (int r = row - 1, c = col + 1; r >= 0 && c < g_n; --r, ++c)
         if (g_board[r][c]) return false;
 
     return true;
 }
 
-// Try to place a queen in every row starting from `row`; true = solved.
 bool solveNQueens(int row) {
-    if (row == g_n) return true;   // every row has a queen -> solution found
+    if (row == g_n) return true;
 
-    // The first queen is pre-placed at (0,0); skip row 0 (lab constraint).
     if (row == 0) return solveNQueens(row + 1);
 
     for (int col = 0; col < g_n; ++col) {
         if (isSafe(row, col)) {
-            g_board[row][col] = 1;              // place queen -> choose
-            if (solveNQueens(row + 1)) return true;  // explore -> recurse
-            g_board[row][col] = 0;              // undo -> backtrack
+            g_board[row][col] = 1;
+            if (solveNQueens(row + 1)) return true;
+            g_board[row][col] = 0;
         }
     }
-    return false;  // no column of this row works -> fail upward
+    return false;
 }
 
-// Print the board; 1 = queen, 0 = empty square.
 void printBoard() {
     cout << "\nSolution Matrix:\n";
     for (int r = 0; r < g_n; ++r) {
@@ -87,7 +80,6 @@ void printBoard() {
     }
 }
 
-// Drives the whole practical; main() only calls this.
 void run() {
     cout << "Enter the value of N: ";
     cin >> g_n;
@@ -98,7 +90,7 @@ void run() {
     }
 
     g_board.assign(g_n, vector<int>(g_n, 0));
-    g_board[0][0] = 1;  // fix the first queen at the top-left square
+    g_board[0][0] = 1;
 
     if (solveNQueens(0)) {
         printBoard();

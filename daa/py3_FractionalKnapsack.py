@@ -2,42 +2,50 @@
 QUESTION 3 (DAA):
 Write a program to solve a fractional Knapsack problem using a greedy method.
 
-HOW IT WORKS (GREEDY STRATEGY):
-1. Compute the value/weight ratio of every item ("value per kilogram").
-2. Sort items by that ratio in DECREASING order.
-3. Walk the sorted list:
-   - if the whole item fits in the remaining capacity, take it fully;
-   - otherwise take the FRACTION that fits, then stop (knapsack full).
-   Taking the best deal first is optimal because any other choice could be
-   improved by swapping a worse deal for a better one.
+HOW IT WORKS
+    1. Compute the value/weight ratio of every item.
+    2. Sort the items by that ratio in decreasing order.
+    3. Take whole items while they fit. When the next item does not fit, take
+       the fraction that fills the remaining capacity and stop.
 
-COMMANDS (run from the repository root):
-    install dependencies : none (Python standard library only)
-    run the program      : python3 daa/py3_FractionalKnapsack.py
+    Taking the best deal first is optimal for the fractional version because
+    any solution can be improved by swapping a worse deal for a better one.
+
+STEPS
+    1. Imports
+    2. Input items and capacity
+    3. Greedy algorithm
+    4. Run and print the selection
+    5. Observation
+
+RUN
+    python3 daa/py3_FractionalKnapsack.py
+
+    In Jupyter, open py3_FractionalKnapsack.ipynb or split this file at the
+    "# %%" markers.
 """
 
-# ============================================================
-# STEP 1 : IMPORTS
-# ============================================================
+# %% Step 1: Imports
 from collections import namedtuple
 
-# One knapsack item: index, value, weight, and value/weight ratio.
+# %% Step 2: Input items and capacity
+# Each item is (index, value, weight, value/weight). Change the list or the
+# capacity and re-run this cell plus the steps below it.
 Item = namedtuple("Item", ["index", "value", "weight", "ratio"])
 
+items = [
+    Item(1, 60, 10, 60 / 10),
+    Item(2, 100, 20, 100 / 20),
+    Item(3, 120, 30, 120 / 30),
+]
+capacity = 50
 
-# ============================================================
-# STEP 2 : INPUT + GREEDY ALGORITHM FUNCTIONS (no files needed)
-# ============================================================
-def read_items(n):
-    """Read value and weight of each item; store the ratio alongside."""
-    items = []
-    for i in range(n):
-        value = float(input(f"Item {i + 1} value: "))
-        weight = float(input(f"Item {i + 1} weight: "))
-        items.append(Item(i + 1, value, weight, value / weight))
-    return items
+for item in items:
+    print(f"Item {item.index}: value={item.value}, weight={item.weight}, "
+          f"ratio={item.ratio:.2f}")
+print("Capacity:", capacity)
 
-
+# %% Step 3: Greedy algorithm
 def fractional_knapsack(items, capacity):
     """Greedy fill: best-ratio items first, fraction at the end."""
     items = sorted(items, key=lambda item: item.ratio, reverse=True)
@@ -48,28 +56,21 @@ def fractional_knapsack(items, capacity):
         if remaining <= 0:
             break
         if item.weight <= remaining:
-            remaining -= item.weight                 # take 100%
+            remaining -= item.weight
             total_value += item.value
             print(f"Item {item.index} -> 100% selected")
         else:
-            fraction = remaining / item.weight       # take the fraction that fits
+            fraction = remaining / item.weight
             total_value += item.value * fraction
             print(f"Item {item.index} -> {fraction * 100:.2f}% selected")
             remaining = 0
     return total_value
 
+# %% Step 4: Run and print the selection
+total = fractional_knapsack(items, capacity)
+print(f"\nMaximum value = {total:.2f}")
 
-# ============================================================
-# STEP 3 : DRIVER - read items + capacity, run greedy, print result
-# ============================================================
-def run():
-    n = int(input("Enter number of items: "))
-    items = read_items(n)
-    capacity = float(input("Enter knapsack capacity: "))
-
-    total = fractional_knapsack(items, capacity)
-    print(f"\nMaximum value = {total:.2f}")
-
-
-if __name__ == "__main__":
-    run()
+# %% Step 5: Observation
+print("\nObservation")
+print("  Items with the highest value per unit weight are taken first. Only")
+print("  the last item is split, so the knapsack is filled exactly.")

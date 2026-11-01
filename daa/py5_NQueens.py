@@ -3,62 +3,66 @@ QUESTION 5 (DAA):
 Design an n-Queens matrix having the first Queen placed. Use backtracking
 to place the remaining Queens and generate the final n-queen's matrix.
 
-HOW IT WORKS (BACKTRACKING):
-1. Place queens one ROW at a time - each row must hold exactly one queen.
-2. The FIRST queen is permanently fixed at square (0, 0) (the question's
-   constraint). For some N that makes the puzzle unsolvable even when
-   solutions exist with the first queen elsewhere (e.g. N = 6).
-3. For every other row, try each column: keep it only if no queen above
-   shares the column, the "\\" diagonal or the "/" diagonal.
-4. Recurse to the next row; if a later row fails everywhere, REMOVE the
-   queen (backtrack) and try the next column in this row.
-5. Solved when all N rows hold queens.
+HOW IT WORKS
+    1. Place queens one row at a time; each row holds exactly one queen.
+    2. The first queen is fixed at (0, 0), as the question requires.
+    3. For every other row, try each column and keep it only if no queen
+       above shares the column or either diagonal.
+    4. Recurse to the next row. If a later row fails everywhere, remove the
+       current queen (backtrack) and try the next column.
+    5. Solved when all N rows hold a queen.
 
-COMMANDS (run from the repository root):
-    install dependencies : none (Python standard library only)
-    run the program      : python3 daa/py5_NQueens.py
+    With the first queen fixed at (0, 0), some sizes have no solution even
+    though a solution exists when the first queen may move (for example N=6).
+
+STEPS
+    1. Board variables
+    2. Safety check
+    3. Backtracking search
+    4. Print the matrix
+    5. Solve for N = 4
+    6. Try several board sizes
+    7. Observation
+
+RUN
+    python3 daa/py5_NQueens.py
+
+    In Jupyter, open py5_NQueens.ipynb or split this file at the "# %%"
+    markers. This practical needs no imports.
 """
 
-# ============================================================
-# STEP 1 : IMPORTS
-# ============================================================
-# none - this program needs only the standard built-ins
+# %% Step 1: Board variables
+N = 4
+QUEENS = []
 
-
-# ============================================================
-# STEP 2 : BACKTRACKING ALGORITHM (board held in module globals)
-# ============================================================
-N = 0                       # board size, set by run()
-QUEENS = []                 # QUEENS[row] = column of the queen in that row
-
-
+# %% Step 2: Safety check
 def is_safe(row, column):
     """Check the column and both diagonals against queens placed above."""
     for above in range(row):
         same_column = QUEENS[above] == column
-        same_slash = above + QUEENS[above] == row + column       # "/" diagonal
-        same_backslash = above - QUEENS[above] == row - column   # "\" diagonal
+        same_slash = above + QUEENS[above] == row + column
+        same_backslash = above - QUEENS[above] == row - column
         if same_column or same_slash or same_backslash:
             return False
     return True
 
-
+# %% Step 3: Backtracking search
 def place_queens(row):
-    """Try to place a queen in every row from `row` onward; True = solved."""
+    """Try to place a queen in every row from row onward; True = solved."""
     if row == N:
-        return True                       # all rows have a queen
-    if row == 0:                          # first queen fixed at (0, 0)
+        return True
+    if row == 0:
         return place_queens(row + 1)
 
     for column in range(N):
         if is_safe(row, column):
-            QUEENS[row] = column          # place (choose)
-            if place_queens(row + 1):     # explore
+            QUEENS[row] = column
+            if place_queens(row + 1):
                 return True
-            QUEENS[row] = -1              # remove (backtrack)
-    return False                          # exhausted this row -> fail upward
+            QUEENS[row] = -1
+    return False
 
-
+# %% Step 4: Print the matrix
 def print_board():
     """Print the solution matrix; 1 = queen, 0 = empty square."""
     print("\nSolution Matrix:")
@@ -67,25 +71,25 @@ def print_board():
                         for column in range(N))
         print(line)
 
+# %% Step 5: Solve for N = 4
+QUEENS[:] = [-1] * N
+QUEENS[0] = 0
 
-# ============================================================
-# STEP 3 : DRIVER - read N, fix first queen, backtrack, print
-# ============================================================
-def run():
-    global N
-    N = int(input("Enter the value of N: "))
-    if N < 1:
-        print("N must be at least 1.")
-        return
+if place_queens(0):
+    print_board()
+else:
+    print("No solution exists with the first queen at (0, 0).")
 
+# %% Step 6: Try several board sizes
+for size in range(1, 9):
+    N = size
     QUEENS[:] = [-1] * N
-    QUEENS[0] = 0                         # queen fixed at top-left
+    QUEENS[0] = 0
+    solved = place_queens(0)
+    result = "solution found" if solved else "no solution with first queen at (0, 0)"
+    print(f"N = {N}: {result}")
 
-    if place_queens(0):
-        print_board()
-    else:
-        print("No solution exists with the first queen at (0, 0).")
-
-
-if __name__ == "__main__":
-    run()
+# %% Step 7: Observation
+print("\nObservation")
+print("  Fixing the first queen can make the puzzle impossible for some N.")
+print("  Backtracking removes a queen as soon as no safe column remains.")

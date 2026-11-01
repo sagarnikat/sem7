@@ -2,26 +2,40 @@
 QUESTION 3 (ML):
 Given a bank customer, build a neural-network-based classifier that can
 determine whether they will leave (churn) or not in the next 6 months.
-Steps: read the dataset; distinguish features/target and split; normalize;
-initialize and build the model, identify points of improvement and
-implement them; print the accuracy score and confusion matrix.
+
 Dataset: https://www.kaggle.com/barelydedicated/bank-customer-churn-modeling
 
-NOTE ON STEP 2: if the real Churn_Modelling.csv is not present, a small
-HARDCODED demo dataset (16 customers, same column structure) is written
-so the pipeline runs end-to-end. Drop the real Kaggle CSV in this folder
-for real-world numbers.
+HOW IT WORKS
+    Churn_Modelling.csv sits in the same folder as this file. If it is
+    missing, Step 2 writes a small hardcoded demo file with the same columns.
 
-COMMANDS (run from the repository root):
-    install dependencies : pip install pandas numpy scikit-learn tensorflow
-    run the program      : python3 ml/py3_ChurnNN.py
+    The model is a small feed-forward network:
+        input -> Dense(64, relu) -> Dense(32, relu) -> Dense(1, sigmoid)
+    The improved version adds an extra layer, dropout and early stopping.
+
+STEPS
+    1. Imports
+    2. Create the dataset file if it is missing
+    3. Load the dataset
+    4. Separate features and target, then split
+    5. Normalise the data
+    6. Build the baseline model
+    7. Train the baseline model
+    8. Build the improved model
+    9. Train the improved model
+    10. Accuracy and confusion matrix for both models
+    11. Observation
+    12. Plots with matplotlib
+
+RUN
+    python3 ml/py3_ChurnNN.py
+
+    In Jupyter, open py3_ChurnNN.ipynb or split this file at the "# %%"
+    markers.
 """
 
-# ============================================================
-# STEP 1 : IMPORTS
-# ============================================================
+# %% Step 1: Imports
 import os
-import sys
 
 import pandas as pd
 from sklearn.metrics import accuracy_score, confusion_matrix
@@ -31,12 +45,15 @@ from tensorflow.keras.callbacks import EarlyStopping
 from tensorflow.keras.layers import Dense, Dropout, Input
 from tensorflow.keras.models import Sequential
 
+if "__file__" in globals():
+    SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+else:
+    SCRIPT_DIR = os.getcwd()
 
-# ============================================================
-# STEP 2 : CREATE THE DATASET FILE - if Churn_Modelling.csv is
-#          missing, write a small HARDCODED demo dataset with the
-#          same columns as the real one (16 customers)
-# ============================================================
+DATASET_FILE = os.path.join(SCRIPT_DIR, "Churn_Modelling.csv")
+
+# %% Step 2: Create the dataset file if it is missing
+# Skip this step when Churn_Modelling.csv is already in the folder.
 DEMO_CHURN_CSV = """RowNumber,CustomerId,Surname,CreditScore,Geography,Gender,Age,Tenure,Balance,NumOfProducts,HasCrCard,IsActiveMember,EstimatedSalary,Exited
 1,15634702,Hargrave,619,France,Male,42,2,0.00,1,1,1,101348.88,1
 2,15634773,Hill,702,Spain,Female,45,8,122608.29,1,1,0,112542.58,0
@@ -56,163 +73,146 @@ DEMO_CHURN_CSV = """RowNumber,CustomerId,Surname,CreditScore,Geography,Gender,Ag
 16,15691973,Chu,501,Spain,Male,41,6,0.00,1,1,0,51419.18,0
 """
 
-DATASET_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                            "Churn_Modelling.csv")
-
-
-def find_dataset():
-    """Return the CSV to use: ml/Churn_Modelling.csv first, then ./..."""
-    if os.path.exists(DATASET_FILE):
-        return DATASET_FILE
-    local = os.path.abspath("Churn_Modelling.csv")
-    if os.path.exists(local):
-        return local
-    return DATASET_FILE
-
-
-def ensure_dataset():
-    """Return the CSV to use; create the demo only when no file exists."""
-    path = find_dataset()
-    if os.path.exists(path):
-        print(f"Using dataset: {path}")
-        return path
+if os.path.exists(DATASET_FILE):
+    print(f"Using dataset: {DATASET_FILE}")
+else:
     with open(DATASET_FILE, "w", encoding="utf-8") as file:
         file.write(DEMO_CHURN_CSV)
-    print(f"No Churn_Modelling.csv found - created demo: {DATASET_FILE}")
-    return DATASET_FILE
+    print(f"Created demo dataset: {DATASET_FILE}")
 
+# %% Step 3: Load the dataset
+data = pd.read_csv(DATASET_FILE)
+data = data.drop(columns=["RowNumber", "CustomerId", "Surname"])
 
-# ============================================================
-# STEP 3 : USE THE FILE - read it, distinguish features/target,
-#          one-hot encode, split into train and test sets
-# ============================================================
-def load_dataset(path=None):
-    """Read the CSV and drop the three pure identifier columns."""
-    path = path or find_dataset()
-    data = pd.read_csv(path)
-    data.columns = [str(c).replace("\ufeff", "").strip()
-                    for c in data.columns]
+print("\nShape:", data.shape)
+print(data.head())
 
-    missing = [name for name in ("Exited", "Geography", "Gender")
-               if name not in data.columns]
-    if missing:
-        print("\nERROR: this CSV is not the expected bank churn dataset.",
-              file=sys.stderr)
-        print(f"Missing required column(s): {missing}", file=sys.stderr)
-        print(f"Columns found: {list(data.columns)}", file=sys.stderr)
-        raise SystemExit(1)
+# %% Step 4: Separate features and target, then split
+data = pd.get_dummies(data, columns=["Geography", "Gender"], drop_first=True)
 
-    print(f"\nFile: {path}")
-    print("Dataset Shape:", data.shape)
-    print(data.head())
+X = data.drop(columns=["Exited"])
+y = data["Exited"]
 
-    data = data.drop(["RowNumber", "CustomerId", "Surname"], axis=1,
-                     errors="ignore")
-    return data
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.20, random_state=42, stratify=y)
 
+print("\nFeature shape:", X.shape)
+print("Training rows:", len(X_train))
+print("Test rows    :", len(X_test))
 
-def split_dataset(data):
-    """One-hot encode categoricals, split X/y, 80/20 stratified split."""
-    data = pd.get_dummies(data, columns=["Geography", "Gender"],
-                          drop_first=True)
-    X, y = data.drop("Exited", axis=1), data["Exited"]
+# %% Step 5: Normalise the data
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
 
-    print("Feature shape:", X.shape)
-    print("Target shape:", y.shape)
-    return train_test_split(X, y, test_size=0.20, random_state=42,
-                            stratify=y)
+# %% Step 6: Build the baseline model
+initial_model = Sequential([
+    Input(shape=(X_train.shape[1],)),
+    Dense(64, activation="relu"),
+    Dense(32, activation="relu"),
+    Dense(1, activation="sigmoid"),
+])
+initial_model.compile(optimizer="adam", loss="binary_crossentropy",
+                      metrics=["accuracy"])
+initial_model.summary()
 
+# %% Step 7: Train the baseline model
+initial_history = initial_model.fit(
+    X_train, y_train,
+    epochs=50,
+    batch_size=32,
+    validation_split=0.2,
+    verbose=1,
+)
 
-# ============================================================
-# STEP 4 : NORMALIZE THE DATA (fit the scaler on train only)
-# ============================================================
-def scale_data(X_train, X_test):
-    """StandardScaler: fit on train, apply the same scaling to test."""
-    scaler = StandardScaler()
-    return scaler.fit_transform(X_train), scaler.transform(X_test)
+# %% Step 8: Build the improved model
+model = Sequential([
+    Input(shape=(X_train.shape[1],)),
+    Dense(64, activation="relu"),
+    Dropout(0.3),
+    Dense(32, activation="relu"),
+    Dropout(0.2),
+    Dense(16, activation="relu"),
+    Dense(1, activation="sigmoid"),
+])
+model.compile(optimizer="adam", loss="binary_crossentropy",
+              metrics=["accuracy"])
+model.summary()
 
+# %% Step 9: Train the improved model
+early_stop = EarlyStopping(
+    monitor="val_loss",
+    patience=5,
+    restore_best_weights=True,
+)
 
-# ============================================================
-# STEP 5 : INITIALIZE AND BUILD THE MODELS (base + improvement)
-# ============================================================
-def build_base_model(input_dim):
-    """Baseline: two relu layers + sigmoid output (no regularisation)."""
-    model = Sequential([
-        Input(shape=(input_dim,)),
-        Dense(64, activation="relu"),
-        Dense(32, activation="relu"),
-        Dense(1, activation="sigmoid"),
-    ])
-    model.compile(optimizer="adam", loss="binary_crossentropy",
-                  metrics=["accuracy"])
-    model.summary()
-    return model
+history = model.fit(
+    X_train, y_train,
+    epochs=50,
+    batch_size=32,
+    validation_split=0.2,
+    callbacks=[early_stop],
+    verbose=1,
+)
 
-
-def build_improved_model(input_dim):
-    """Improvement: dropout layers (0.3/0.2) - the point of improvement."""
-    model = Sequential([
-        Input(shape=(input_dim,)),
-        Dense(64, activation="relu"),
-        Dropout(0.3),
-        Dense(32, activation="relu"),
-        Dropout(0.2),
-        Dense(16, activation="relu"),
-        Dense(1, activation="sigmoid"),
-    ])
-    model.compile(optimizer="adam", loss="binary_crossentropy",
-                  metrics=["accuracy"])
-    model.summary()
-    return model
-
-
-# ============================================================
-# STEP 6 : TRAIN BOTH MODELS (improved one adds early stopping)
-# ============================================================
-def train_models(X_train, X_test, y_train):
-    """Fit base, then dropout+early-stopping model; return both models."""
-    input_dim = X_train.shape[1]
-
-    initial_model = build_base_model(input_dim)
-    initial_model.fit(X_train, y_train, epochs=50, batch_size=32,
-                      validation_split=0.2, verbose=1)
-
-    early_stop = EarlyStopping(monitor="val_loss", patience=5,
-                               restore_best_weights=True)
-    model = build_improved_model(input_dim)
-    model.fit(X_train, y_train, epochs=50, batch_size=32,
-              validation_split=0.2, callbacks=[early_stop], verbose=1)
-    return initial_model, model
-
-
-# ============================================================
-# STEP 7 : EVALUATE - accuracy score + confusion matrix
-# ============================================================
-def evaluate(y_test, y_pred, label):
-    """Print accuracy + confusion matrix for one model's predictions."""
-    print(f"\n----- {label} -----")
-    print("Accuracy Score:", accuracy_score(y_test, y_pred))
+# %% Step 10: Accuracy and confusion matrix for both models
+def evaluate(name, prediction):
+    """Print accuracy and confusion matrix for one model."""
+    print(f"\n----- {name} -----")
+    print("Accuracy Score:", accuracy_score(y_test, prediction))
     print("Confusion Matrix (TN, FP / FN, TP):")
-    print(confusion_matrix(y_test, y_pred))
+    print(confusion_matrix(y_test, prediction))
 
 
-# ============================================================
-# STEP 8 : DRIVER - chain steps 2-7 together
-# ============================================================
-def run():
-    path = ensure_dataset()                           # STEP 2
-    data = load_dataset(path)                         # STEP 3
-    X_train, X_test, y_train, y_test = split_dataset(data)
-    X_train, X_test = scale_data(X_train, X_test)     # STEP 4
+y_base = (initial_model.predict(X_test) > 0.5).astype(int).ravel()
+evaluate("BASE MODEL", y_base)
 
-    initial_model, model = train_models(X_train, X_test, y_train)   # STEP 5-6
+y_pred = (model.predict(X_test) > 0.5).astype(int).ravel()
+evaluate("IMPROVED MODEL (dropout + early stopping)", y_pred)
 
-    y_base = (initial_model.predict(X_test) > 0.5).astype(int).ravel()
-    evaluate(y_test, y_base, "BASE MODEL")            # STEP 7
+# %% Step 11: Observation
+print("\nObservation")
+print("  Compare the accuracy and confusion matrices. Dropout and early")
+print("  stopping usually reduce overfitting, so the improved model should")
+print("  generalise better than the baseline on the test set.")
 
-    y_pred = (model.predict(X_test) > 0.5).astype(int).ravel()
-    evaluate(y_test, y_pred, "IMPROVED MODEL (dropout + early stopping)")
+# %% Step 12: Plots with matplotlib
+import matplotlib.pyplot as plt
 
+fig, axes = plt.subplots(1, 2, figsize=(12, 4.5))
+for axis, metric in zip(axes, ["accuracy", "loss"]):
+    axis.plot(initial_history.history[metric], label="baseline train")
+    axis.plot(initial_history.history[f"val_{metric}"],
+              "--", label="baseline validation")
+    axis.plot(history.history[metric], label="improved train")
+    axis.plot(history.history[f"val_{metric}"],
+              "--", label="improved validation")
+    axis.set_title(f"Model {metric}")
+    axis.set_xlabel("Epoch")
+    axis.set_ylabel(metric.capitalize())
+    axis.grid(alpha=0.3)
+    axis.legend(fontsize=8)
+fig.suptitle("Training history: baseline vs improved model")
+fig.tight_layout()
+plt.show()
 
-if __name__ == "__main__":
-    run()
+fig, axes = plt.subplots(1, 2, figsize=(10, 4))
+for axis, name, prediction in [(axes[0], "Baseline", y_base),
+                               (axes[1], "Improved", y_pred)]:
+    matrix = confusion_matrix(y_test, prediction)
+    image = axis.imshow(matrix, cmap="Blues")
+    for row in range(matrix.shape[0]):
+        for column in range(matrix.shape[1]):
+            axis.text(column, row, matrix[row, column], ha="center",
+                      va="center",
+                      color="white" if matrix[row, column] > matrix.max() / 2
+                      else "black")
+    axis.set_title(f"{name} model")
+    axis.set_xlabel("Predicted (0 = stays, 1 = churns)")
+    axis.set_ylabel("Actual (0 = stays, 1 = churns)")
+    axis.set_xticks([0, 1])
+    axis.set_yticks([0, 1])
+    fig.colorbar(image, ax=axis, shrink=0.8)
+fig.suptitle("Churn confusion matrices")
+fig.tight_layout()
+plt.show()

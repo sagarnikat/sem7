@@ -38,14 +38,12 @@
 
 using namespace std;
 
-// One knapsack item: its value, its weight, and its value-per-unit ratio.
 struct Item {
     double value;
     double weight;
     double ratio;
 };
 
-// Read all items and the capacity from standard input.
 vector<Item> readItems(int itemCount) {
     vector<Item> items(itemCount);
 
@@ -55,18 +53,16 @@ vector<Item> readItems(int itemCount) {
         cin >> items[i].value;
         cout << "Item " << (i + 1) << " weight: ";
         cin >> items[i].weight;
-        items[i].ratio = items[i].value / items[i].weight;  // the "deal quality"
+        items[i].ratio = items[i].value / items[i].weight;
     }
     return items;
 }
 
-// Sort items so the best value/weight ratio comes first (greedy order).
 void sortByRatio(vector<Item>& items) {
     sort(items.begin(), items.end(),
          [](const Item& a, const Item& b) { return a.ratio > b.ratio; });
 }
 
-// Core greedy algorithm: take whole items while they fit, then a fraction.
 double fillKnapsack(vector<Item> items, double capacity) {
     sortByRatio(items);
 
@@ -75,15 +71,15 @@ double fillKnapsack(vector<Item> items, double capacity) {
 
     cout << "\nSelected Items:\n";
     for (size_t i = 0; i < items.size(); ++i) {
-        if (remaining <= 0) break;  // knapsack is full -> stop
+        if (remaining <= 0) break;
 
         if (items[i].weight <= remaining) {
-            // Whole item fits: take 100% of it.
+
             remaining -= items[i].weight;
             totalValue += items[i].value;
             cout << "Item " << (i + 1) << " -> 100% selected\n";
         } else {
-            // Item does not fit: take the fraction of it that fits.
+
             double fraction = remaining / items[i].weight;
             totalValue += items[i].value * fraction;
             cout << "Item " << (i + 1) << " -> " << fixed << setprecision(2)
@@ -94,7 +90,6 @@ double fillKnapsack(vector<Item> items, double capacity) {
     return totalValue;
 }
 
-// Drives the whole practical; main() only calls this.
 void run() {
     int itemCount;
     cout << "Enter number of items: ";

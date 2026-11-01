@@ -35,34 +35,29 @@
 
 using namespace std;
 
-const int LIMIT = 92;   // F(92) overflows for long long beyond this
+const int LIMIT = 92;
 
-// ---------- ITERATIVE version ----------
-// O(n) time, O(1) space: carry the last two values forward.
 long long fibonacciIterative(int n) {
     if (n <= 1) return n;
 
-    long long a = 0, b = 1;         // F(i-2) and F(i-1)
+    long long a = 0, b = 1;
     for (int i = 2; i <= n; ++i) {
-        long long c = a + b;        // F(i) from the two previous terms
-        a = b;                      // slide the window one step
+        long long c = a + b;
+        a = b;
         b = c;
     }
     return b;
 }
 
-// ---------- RECURSIVE version ----------
-// Faithful translation of the formula, but exponential time.
 long long fibonacciRecursive(int n) {
-    if (n == 0) return 0;                                   // base case 1
-    if (n == 1) return 1;                                   // base case 2
+    if (n == 0) return 0;
+    if (n == 1) return 1;
     return fibonacciRecursive(n - 1) + fibonacciRecursive(n - 2);
 }
 
-// Ask n once, compute both ways, show a practical timing contrast.
 void run() {
     cout << "Enter n (0 to " << LIMIT
-         << "; the recursive version is exponential): "; 
+         << "; the recursive version is exponential): ";
     int n;
     if (!(cin >> n) || n < 0 || n > LIMIT) {
         cout << "Invalid input.\n";

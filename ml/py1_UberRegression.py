@@ -1,39 +1,41 @@
 """
 QUESTION 1 (ML):
-Predict the price of the Uber ride from a given pickup point to the agreed
+Predict the price of an Uber ride from a given pickup point to the agreed
 drop-off location. Perform:
     1. Pre-process the dataset.
     2. Identify outliers.
     3. Check the correlation.
     4. Implement linear regression and random forest regression models.
     5. Evaluate the models and compare their scores (R2, RMSE, etc.).
+
 Dataset: https://www.kaggle.com/datasets/yasserh/uber-fares-dataset
 
-NOTE ON STEP 2: the REAL uber.csv has 9 columns -
-    Unnamed: 0, key, fare_amount, pickup_datetime, pickup_longitude,
-    pickup_latitude, dropoff_longitude, dropoff_latitude, passenger_count
-Some copies of the Kaggle file have a corrupted header (a Unicode
-ligature, e.g. "dropoﬀ_longitude") or extra spaces, so the loader
-normalises header names before using them. The demo CSV mirrors the real
-schema, and the real file is always preferred. The dataset is looked up
-next to this script (ml/uber.csv) first, then in the current directory,
-so the program works from the repo root as well as from inside ml/.
+HOW IT WORKS
+    uber.csv sits in the same folder as this file. If it is not there, Step 2
+    writes a small hardcoded demo file (same columns) so the practical still
+    runs. Step 3 loads whichever file is present.
 
-NOTE ON LIBRARIES: only numpy, pandas and scikit-learn are used. The
-correlation heatmap and the actual-vs-predicted plot are rendered as
-ASCII art in the terminal, so no plotting library is required.
+STEPS
+    1. Imports
+    2. Create the dataset file if it is missing
+    3. Load the dataset
+    4. Preprocess
+    5. Add distance and remove outliers
+    6. Check the correlation
+    7. Train linear regression and random forest
+    8. Evaluate and compare the models
+    9. Observation
+    10. Plots with matplotlib
 
-COMMANDS (run from the repository root):
-    install dependencies : pip install numpy pandas scikit-learn
-    run the program      : python3 ml/py1_UberRegression.py
+RUN
+    python3 ml/py1_UberRegression.py
+
+    In Jupyter, open py1_UberRegression.ipynb or split this file at the
+    "# %%" markers.
 """
 
-# ============================================================
-# STEP 1 : IMPORTS
-# ============================================================
+# %% Step 1: Imports
 import os
-import sys
-import unicodedata
 
 import numpy as np
 import pandas as pd
@@ -42,13 +44,15 @@ from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.model_selection import train_test_split
 
+if "__file__" in globals():
+    SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+else:
+    SCRIPT_DIR = os.getcwd()
 
-# ============================================================
-# STEP 2 : CREATE THE DATASET FILE - if uber.csv is missing,
-#          write a small HARDCODED demo dataset with the SAME
-#          9 COLUMNS as the real Kaggle file (a few impossible
-#          rows are included so preprocessing has work to do)
-# ============================================================
+DATASET_FILE = os.path.join(SCRIPT_DIR, "uber.csv")
+
+# %% Step 2: Create the dataset file if it is missing
+# Skip this step when uber.csv is already in the folder.
 DEMO_UBER_CSV = """Unnamed: 0,key,fare_amount,pickup_datetime,pickup_longitude,pickup_latitude,dropoff_longitude,dropoff_latitude,passenger_count
 0,2015-01-27 19:47:14.0000001,8.5,2015-01-27 19:47:14,-73.98,40.75,-73.95,40.78,1
 1,2015-02-14 08:15:00.0000002,12.0,2015-02-14 08:15:00,-73.99,40.73,-73.92,40.76,2
@@ -72,295 +76,152 @@ DEMO_UBER_CSV = """Unnamed: 0,key,fare_amount,pickup_datetime,pickup_longitude,p
 19,2015-06-25 02:02:02.0000020,-5.0,2015-06-25 02:02:02,-73.98,40.75,-73.95,40.78,0
 """
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-
-# Look for the CSV next to this script first (ml/uber.csv), then in the
-# directory the user launched from. Both of these then work:
-#     python3 ml/py1_UberRegression.py      (from the repo root)
-#     python3 py1_UberRegression.py         (from inside ml/)
-DATASET_FILE = os.path.join(SCRIPT_DIR, "uber.csv")
-
-# Columns the model truly needs. `passenger_count` is treated as optional:
-# some exports of this dataset omit it, so we synthesise a neutral value
-# (1 passenger) and print a warning instead of crashing with KeyError.
-REQUIRED_COLUMNS = ["fare_amount", "pickup_datetime", "pickup_longitude",
-                    "pickup_latitude", "dropoff_longitude",
-                    "dropoff_latitude"]
-OPTIONAL_COLUMNS = ["passenger_count"]
-
-
-def normalise_columns(df):
-    """Strip BOM/spaces and repair ligature-corrupted Kaggle headers.
-
-    Some copies of uber.csv ship with "dropo<U+FB00>_longitude" (the "ff"
-    ligature) or a stray accented character. NFKD turns the ligature into
-    "ff", and the prefix check catches any other "dropo*" misspelling.
-    """
-    cleaned = {}
-    for column in df.columns:
-        name = str(column).replace("\ufeff", "").strip()
-        name = unicodedata.normalize("NFKD", name)
-        name = "".join(ch for ch in name if not unicodedata.combining(ch))
-
-        lowered = name.lower()
-        for suffix in ("longitude", "latitude"):
-            if lowered.startswith("dropo") and lowered.endswith(suffix):
-                name = "dropoff_" + suffix
-                break
-
-        cleaned[column] = name
-    df = df.rename(columns=cleaned)
-    # If a corrupted header plus its correct twin both exist, keep the first.
-    return df.loc[:, ~df.columns.duplicated()]
-
-
-def find_dataset():
-    """Return the CSV to use: ml/uber.csv first, then ./uber.csv."""
-    if os.path.exists(DATASET_FILE):
-        return DATASET_FILE
-
-    local = os.path.abspath("uber.csv")
-    if os.path.exists(local):
-        return local
-    return DATASET_FILE
-
-
-# The Kaggle dataset is New York City. Rows with (0, 0) GPS (missing
-# coordinates) or points on another continent still pass a generic
-# lat/lon range check, so box each trip to the NYC area. Loosen these
-# bounds if you use a different city's export.
-NYC_BOUNDS = {"lat": (40.0, 41.5), "lon": (-74.5, -73.0)}
-MAX_TRIP_KM = 100.0      # sanity cap; no NYC yellow-cab trip is this long
-
-
-def ensure_dataset():
-    """Return the CSV to use; create the demo only when no file exists."""
-    path = find_dataset()
-    if os.path.exists(path):
-        print(f"Using dataset: {path}")
-        return path
-
+if os.path.exists(DATASET_FILE):
+    print(f"Using dataset: {DATASET_FILE}")
+else:
     with open(DATASET_FILE, "w", encoding="utf-8") as file:
         file.write(DEMO_UBER_CSV)
-    print(f"No uber.csv found - created demo dataset: {DATASET_FILE}")
-    return DATASET_FILE
+    print(f"Created demo dataset: {DATASET_FILE}")
 
+# %% Step 3: Load the dataset
+df = pd.read_csv(DATASET_FILE)
+print("\nShape:", df.shape)
+print(df.head())
 
-# ============================================================
-# STEP 3 : USE THE FILE - load it, then pre-process the dataset
-# ============================================================
-def load_dataset(path=None):
-    """Read uber.csv, repair the header, and validate the columns."""
-    path = path or find_dataset()
-    df = pd.read_csv(path, encoding="utf-8-sig")
-    df = normalise_columns(df)
+# %% Step 4: Preprocess
+df = df.drop(columns=["Unnamed: 0", "key"], errors="ignore")
+df = df.drop_duplicates()
+df = df.dropna()
 
-    missing = [column for column in REQUIRED_COLUMNS
-               if column not in df.columns]
-    if missing:
-        print("\nERROR: this CSV is not the expected Uber fares dataset.",
-              file=sys.stderr)
-        print(f"Missing required column(s): {missing}", file=sys.stderr)
-        print(f"Columns found: {list(df.columns)}", file=sys.stderr)
-        print("Expected at least: "
-              f"{REQUIRED_COLUMNS + OPTIONAL_COLUMNS}", file=sys.stderr)
-        raise SystemExit(1)
+pickup = pd.to_datetime(df["pickup_datetime"])
+df["hour"] = pickup.dt.hour
+df["day_of_week"] = pickup.dt.day_of_week
+df["month"] = pickup.dt.month
 
-    if "passenger_count" not in df.columns:
-        print("WARNING: passenger_count is missing; assuming 1 passenger.")
-        df["passenger_count"] = 1
+df = df[df["fare_amount"] > 0]
+df = df[df["passenger_count"] > 0]
 
-    print(f"\nFile: {path}")
-    print("\nFirst 5 rows:")
-    print(df.head())
-    print("\nDataset Shape:", df.shape)
-    return df
+print("\nShape after preprocessing:", df.shape)
 
-
-def preprocess(df):
-    """Clean, extract time features, enforce numerics, remove bad rides."""
-    df = df.drop(columns=["Unnamed: 0", "key"], errors="ignore")
-    df = df.drop_duplicates()
-
-    # 1. Force the numeric columns (bad text becomes NaN, later dropped).
-    numeric_columns = ["fare_amount", "pickup_longitude", "pickup_latitude",
-                       "dropoff_longitude", "dropoff_latitude",
-                       "passenger_count"]
-    for column in numeric_columns:
-        df[column] = pd.to_numeric(df[column], errors="coerce")
-
-    # 2. Time features from pickup_datetime (works for real + demo data).
-    pickup = pd.to_datetime(df["pickup_datetime"], errors="coerce")
-    df["year"] = pickup.dt.year
-    df["month"] = pickup.dt.month
-    df["day_of_week"] = pickup.dt.day_of_week
-    df["hour"] = pickup.dt.hour
-
-    # 3. Drop rows with unparseable values.
-    df = df.dropna(subset=numeric_columns
-                   + ["year", "month", "day_of_week", "hour"])
-
-    # 4. Drop impossible rides (negative fare, no passengers, wrong city).
-    df = df[df["fare_amount"] > 0]
-    df = df[df["passenger_count"].between(1, 6)]
-    df = df[
-        df["pickup_latitude"].between(*NYC_BOUNDS["lat"])
-        & df["dropoff_latitude"].between(*NYC_BOUNDS["lat"])
-        & df["pickup_longitude"].between(*NYC_BOUNDS["lon"])
-        & df["dropoff_longitude"].between(*NYC_BOUNDS["lon"])
-    ].copy()
-
-    if df.empty:
-        raise SystemExit("No valid rows left after preprocessing - "
-                         "check that the CSV is the NYC Uber fares dataset.")
-
-    print("Shape after preprocessing:", df.shape)
-    return df
-
-
-# ============================================================
-# STEP 4 : FEATURE ENGINEERING (Haversine distance) + OUTLIERS
-# ============================================================
+# %% Step 5: Add distance and remove outliers
 def haversine(lat1, lon1, lat2, lon2):
-    """Great-circle distance (km) between two (lat, lon) points, vectorised."""
-    R = 6371
+    """Distance in km between two (lat, lon) points."""
+    radius = 6371
     lat1, lat2 = np.radians(lat1), np.radians(lat2)
     dlat = lat2 - lat1
     dlon = np.radians(lon2) - np.radians(lon1)
     a = np.sin(dlat / 2) ** 2 + np.cos(lat1) * np.cos(lat2) * np.sin(dlon / 2) ** 2
-    return R * 2 * np.arcsin(np.sqrt(np.clip(a, 0, 1)))
+    return radius * 2 * np.arcsin(np.sqrt(a))
 
 
-def add_distance_and_trim_outliers(df):
-    """Add distance_km, drop zero distances, IQR-trim the two key columns."""
+df["distance_km"] = haversine(
+    df["pickup_latitude"], df["pickup_longitude"],
+    df["dropoff_latitude"], df["dropoff_longitude"])
+df = df[df["distance_km"] > 0]
 
-    def remove_outliers_iqr(frame, column):
-        Q1, Q3 = frame[column].quantile(0.25), frame[column].quantile(0.75)
-        IQR = Q3 - Q1
-        low, high = Q1 - 1.5 * IQR, Q3 + 1.5 * IQR
-        return frame[(frame[column] >= low) & (frame[column] <= high)]
+print("\nShape before removing outliers:", df.shape)
+for column in ["fare_amount", "distance_km"]:
+    q1, q3 = df[column].quantile([0.25, 0.75])
+    iqr = q3 - q1
+    df = df[df[column].between(q1 - 1.5 * iqr, q3 + 1.5 * iqr)]
+print("Shape after removing outliers:", df.shape)
 
-    df["distance_km"] = haversine(
-        df["pickup_latitude"], df["pickup_longitude"],
-        df["dropoff_latitude"], df["dropoff_longitude"])
-    df = df[df["distance_km"] > 0]
-    df = df[df["distance_km"] <= MAX_TRIP_KM]
+# %% Step 6: Check the correlation
+columns = ["fare_amount", "passenger_count", "hour", "day_of_week", "month",
+           "distance_km", "pickup_longitude", "pickup_latitude",
+           "dropoff_longitude", "dropoff_latitude"]
+correlation = df[columns].corr()
 
-    print("Shape before removing outliers:", df.shape)
-    df = remove_outliers_iqr(df, "fare_amount")
-    df = remove_outliers_iqr(df, "distance_km")
-    print("Shape after removing outliers:", df.shape)
-    return df
+print("\nCorrelation Matrix:")
+print(correlation.round(3).to_string())
 
-
-# ============================================================
-# STEP 5 : CHECK THE CORRELATION (matrix + terminal ASCII heatmap)
-# ============================================================
-def show_correlation(df):
-    """Which columns actually relate to fare_amount."""
-    columns = ["fare_amount", "passenger_count", "hour", "day_of_week",
-               "month", "distance_km", "pickup_longitude", "pickup_latitude",
-               "dropoff_longitude", "dropoff_latitude"]
-    correlation = df[columns].corr()
-
-    print("\nCorrelation Matrix:")
-    print(correlation.round(3).to_string())
-
-    # ASCII heatmap: shade = |correlation|, sign shown in front of the cell.
-    gradient = " .:-=+*#%@"          # index = |r| * 9  (0 -> blank, 1 -> '@')
-    print("\nCorrelation Heatmap (ASCII; symbol shading = strength):")
-    print("          " + " ".join(f"{c[:7]:>7}" for c in columns))
-    for row_name in columns:
-        cells = []
-        for col_name in columns:
-            value = correlation.loc[row_name, col_name]
-            if pd.isna(value):            # constant column -> undefined r
-                cells.append("  na    ")
-                continue
-            shade = gradient[min(int(abs(value) * 9.999), 9)]
-            sign = "+" if value >= 0 else "-"
-            cells.append(f"{sign}{shade}     ")
-        print(f"{row_name[:8]:>8} " + " ".join(cells))
-
-
-# ============================================================
-# STEP 6 : TRAIN BOTH REGRESSION MODELS
-# ============================================================
-def train_models(df):
-    """LinearRegression vs RandomForestRegressor on an 80/20 split."""
-    X = df[["passenger_count", "hour", "day_of_week", "month",
+# %% Step 7: Train linear regression and random forest
+features = ["passenger_count", "hour", "day_of_week", "month",
             "pickup_longitude", "pickup_latitude",
-            "dropoff_longitude", "dropoff_latitude", "distance_km"]]
-    y = df["fare_amount"]
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.20, random_state=42)
+            "dropoff_longitude", "dropoff_latitude", "distance_km"]
 
-    linear_model = LinearRegression()
-    linear_model.fit(X_train, y_train)
-    linear_prediction = linear_model.predict(X_test)
+X = df[features]
+y = df["fare_amount"]
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.20, random_state=42)
 
-    random_forest = RandomForestRegressor(n_estimators=100, random_state=42,
-                                          n_jobs=-1)
-    random_forest.fit(X_train, y_train)
-    rf_prediction = random_forest.predict(X_test)
-    return y_test, linear_prediction, rf_prediction
+linear_model = LinearRegression()
+linear_model.fit(X_train, y_train)
+linear_prediction = linear_model.predict(X_test)
 
+forest = RandomForestRegressor(n_estimators=100, random_state=42, n_jobs=-1)
+forest.fit(X_train, y_train)
+rf_prediction = forest.predict(X_test)
 
-# ============================================================
-# STEP 7 : EVALUATE + COMPARE + ASCII ACTUAL-VS-PREDICTED PLOT
-# ============================================================
-def evaluate_model(name, actual, predicted):
-    """R2 / MAE / RMSE for one model."""
-    r2 = r2_score(actual, predicted)
-    mae = mean_absolute_error(actual, predicted)
-    rmse = np.sqrt(mean_squared_error(actual, predicted))
-    print(f"\n{name}\n---------------------------")
-    print("R2 Score :", round(float(r2), 4))
-    print("MAE      :", round(float(mae), 4))
-    print("RMSE     :", round(float(rmse), 4))
-    return {"Model": name, "R2 Score": r2, "MAE": mae, "RMSE": rmse}
+# %% Step 8: Evaluate and compare the models
+def evaluate(name, actual, predicted):
+    """Print R2, MAE and RMSE for one model."""
+    print(f"\n{name}")
+    print("R2 Score :", round(r2_score(actual, predicted), 4))
+    print("MAE      :", round(mean_absolute_error(actual, predicted), 4))
+    print("RMSE     :", round(np.sqrt(mean_squared_error(actual, predicted)), 4))
 
 
-def plot_actual_vs_predicted_ascii(actual, predicted, width=50, height=15):
-    """Scatter plot in the terminal (no plotting library needed)."""
-    actual = np.asarray(actual, dtype=float)
-    predicted = np.asarray(predicted, dtype=float)
+evaluate("Linear Regression", y_test, linear_prediction)
+evaluate("Random Forest Regression", y_test, rf_prediction)
 
-    low = min(actual.min(), predicted.min())
-    high = max(actual.max(), predicted.max())
-    span = (high - low) or 1.0
+# %% Step 9: Observation
+print("\nObservation")
+print("  The random forest usually gives the lower RMSE because it can learn")
+print("  non-linear effects such as distance and time of day. Compare R2 and")
+print("  RMSE for both models above.")
 
-    grid = [[" "] * width for _ in range(height)]
-    for a, p in zip(actual, predicted):
-        col = int((a - low) / span * (width - 1))
-        row = int((1 - (p - low) / span) * (height - 1))
-        grid[row][col] = "o"            # perfect model -> diagonal of 'o's
+# %% Step 10: Plots with matplotlib
+import matplotlib.pyplot as plt
 
-    print("\nActual vs Predicted - Random Forest (terminal scatter,")
-    print("a perfect model draws the diagonal from bottom-left to top-right):")
-    for row in grid:
-        print("  " + "".join(row))
-    print("  " + f"x-axis: actual ({low:.1f} .. {high:.1f}), "
-          f"y-axis: predicted (same scale)")
+sample = df.sample(min(5000, len(df)), random_state=42)
 
+fig, axes = plt.subplots(1, 2, figsize=(12, 4.5))
+axes[0].scatter(sample["distance_km"], sample["fare_amount"],
+                s=8, alpha=0.4, color="tab:blue")
+axes[0].set_title("Trip distance vs fare")
+axes[0].set_xlabel("Distance (km)")
+axes[0].set_ylabel("Fare amount ($)")
+axes[0].grid(alpha=0.3)
 
-def run():
-    """Steps 2-7 chained together; main() only calls this."""
-    dataset_path = ensure_dataset()                    # STEP 2
-    df = preprocess(load_dataset(dataset_path))        # STEP 3
-    df = add_distance_and_trim_outliers(df)            # STEP 4
-    show_correlation(df)                               # STEP 5
-    y_test, linear_prediction, rf_prediction = train_models(df)   # STEP 6
+axes[1].hist(df["fare_amount"], bins=40, color="tab:green", edgecolor="white")
+axes[1].set_title("Fare amount distribution")
+axes[1].set_xlabel("Fare amount ($)")
+axes[1].set_ylabel("Number of trips")
+axes[1].grid(alpha=0.3)
+fig.tight_layout()
+plt.show()
 
-    results = pd.DataFrame([                           # STEP 7
-        evaluate_model("Linear Regression", y_test, linear_prediction),
-        evaluate_model("Random Forest Regression", y_test, rf_prediction),
-    ])
-    print("\nModel Comparison:")
-    print(results.to_string(index=False))
+fig, axis = plt.subplots(figsize=(8, 6.5))
+image = axis.imshow(correlation, cmap="coolwarm", vmin=-1, vmax=1)
+axis.set_xticks(range(len(columns)))
+axis.set_yticks(range(len(columns)))
+axis.set_xticklabels(columns, rotation=90)
+axis.set_yticklabels(columns)
+for row in range(len(columns)):
+    for column in range(len(columns)):
+        value = correlation.iat[row, column]
+        axis.text(column, row, f"{value:.2f}", ha="center", va="center",
+                  fontsize=7,
+                  color="white" if abs(value) > 0.5 else "black")
+axis.set_title("Correlation matrix (fare vs features)")
+fig.colorbar(image, ax=axis, shrink=0.8)
+fig.tight_layout()
+plt.show()
 
-    plot_actual_vs_predicted_ascii(y_test, rf_prediction)
-
-
-if __name__ == "__main__":
-    run()
+fig, axes = plt.subplots(1, 2, figsize=(12, 4.5), sharex=True, sharey=True)
+for axis, name, prediction in [
+        (axes[0], "Linear Regression", linear_prediction),
+        (axes[1], "Random Forest", rf_prediction)]:
+    axis.scatter(y_test, prediction, s=8, alpha=0.4, color="tab:blue")
+    limit = [min(y_test.min(), prediction.min()),
+             max(y_test.max(), prediction.max())]
+    axis.plot(limit, limit, "r--", linewidth=1, label="perfect prediction")
+    axis.set_title(name)
+    axis.set_xlabel("Actual fare ($)")
+    axis.set_ylabel("Predicted fare ($)")
+    axis.grid(alpha=0.3)
+    axis.legend()
+fig.suptitle("Actual vs predicted fare")
+fig.tight_layout()
+plt.show()

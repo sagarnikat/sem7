@@ -50,48 +50,41 @@
 
 using namespace std;
 
-// A node of the Huffman tree: a leaf holds a character; an internal node
-// holds two children. Leaves and internal nodes are kept in one structure.
 struct Node {
-    char ch;        // valid only for leaves
-    int freq;       // total frequency of the subtree rooted here
-    Node* left;     // child reached with bit '0'
-    Node* right;    // child reached with bit '1'
+    char ch;
+    int freq;
+    Node* left;
+    Node* right;
 
-    // Leaf constructor
     Node(char symbol, int frequency) : ch(symbol), freq(frequency),
                                        left(nullptr), right(nullptr) {}
 
-    // Internal (merged) constructor
     Node(int frequency, Node* leftChild, Node* rightChild)
         : ch('\0'), freq(frequency), left(leftChild), right(rightChild) {}
 
     bool isLeaf() const { return left == nullptr && right == nullptr; }
 };
 
-// Min-heap ordering: the node with the smallest frequency comes out first.
 struct CompareFreq {
     bool operator()(const Node* a, const Node* b) const {
         return a->freq > b->freq;
     }
 };
 
-Node* g_root = nullptr;                          // root of the Huffman tree
-unordered_map<char, string> g_codes;             // character -> its code
+Node* g_root = nullptr;
+unordered_map<char, string> g_codes;
 
-// Count how many times every character occurs in the text.
 unordered_map<char, int> countFrequencies(const string& text) {
     unordered_map<char, int> freq;
     for (char c : text) freq[c]++;
     return freq;
 }
 
-// Recursively label the tree: going left appends '0', going right appends '1'.
 void generateCodes(Node* node, string code) {
     if (node == nullptr) return;
 
     if (node->isLeaf()) {
-        // Edge case: a tree with a single character gives it the code "0".
+
         g_codes[node->ch] = code.empty() ? "0" : code;
         return;
     }
@@ -99,14 +92,12 @@ void generateCodes(Node* node, string code) {
     generateCodes(node->right, code + "1");
 }
 
-// The greedy part: repeatedly merge the two least frequent nodes.
 void buildTree(const string& text) {
     unordered_map<char, int> freq = countFrequencies(text);
 
     priority_queue<Node*, vector<Node*>, CompareFreq> pq;
     for (const auto& [ch, count] : freq) pq.push(new Node(ch, count));
 
-    // Special case: only one unique character in the whole text.
     if (pq.size() == 1) {
         Node* only = pq.top();
         g_root = new Node(only->freq, only, nullptr);
@@ -114,7 +105,7 @@ void buildTree(const string& text) {
         while (pq.size() > 1) {
             Node* left = pq.top(); pq.pop();
             Node* right = pq.top(); pq.pop();
-            // Parent frequency = sum of the children (just an internal count).
+
             pq.push(new Node(left->freq + right->freq, left, right));
         }
         g_root = pq.top();
@@ -123,14 +114,12 @@ void buildTree(const string& text) {
     generateCodes(g_root, "");
 }
 
-// Replace every character of the text by its Huffman code.
 string encode(const string& text) {
     string encoded;
     for (char c : text) encoded += g_codes[c];
     return encoded;
 }
 
-// Walk the tree bit by bit; reaching a leaf outputs one character.
 string decode(const string& encoded, Node* root) {
     string decoded;
     Node* current = root;
@@ -138,13 +127,12 @@ string decode(const string& encoded, Node* root) {
         current = (bit == '0') ? current->left : current->right;
         if (current->isLeaf()) {
             decoded += current->ch;
-            current = root;  // restart for the next character
+            current = root;
         }
     }
     return decoded;
 }
 
-// Pretty-print the code table ("[space]" is easier to read than ' ').
 void displayCodes() {
     cout << "\nHuffman Codes:\n";
     for (const auto& [ch, code] : g_codes) {
@@ -154,7 +142,6 @@ void displayCodes() {
     }
 }
 
-// Drives the whole practical; main() only calls this.
 void run() {
     cout << "Enter text: ";
     string text;
@@ -176,7 +163,7 @@ void run() {
         cout << "4. Exit\n";
         cout << "Enter your choice: ";
         cin >> choice;
-        cin.ignore();  // drop the newline so later getline calls behave
+        cin.ignore();
 
         if (choice == 1) {
             buildTree(text);

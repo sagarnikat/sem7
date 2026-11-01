@@ -26,18 +26,16 @@ pragma solidity ^0.8.20;
  *     upgradeable proxies, interest accounting and off-chain KYC.
  */
 contract BankAccount {
-    // ---------- State ----------
+
     address public owner;
     mapping(address => uint256) private balances;
     uint256 public totalDeposits;
 
-    // ---------- Events ----------
     event Deposited(address indexed account, uint256 amount, uint256 newBalance);
     event Withdrawn(address indexed account, uint256 amount, uint256 newBalance);
     event Transferred(address indexed from, address indexed to, uint256 amount);
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
-    // ---------- Errors (cheaper than require strings) ----------
     error NotOwner();
     error ZeroAmount();
     error InsufficientBalance(uint256 requested, uint256 available);
@@ -49,12 +47,10 @@ contract BankAccount {
         _;
     }
 
-    /// The deployer becomes the bank owner.
     constructor() {
         owner = msg.sender;
     }
 
-    /// Deposit ETH into the caller's bank account.
     function deposit() external payable {
         if (msg.value == 0) revert ZeroAmount();
 
@@ -64,15 +60,12 @@ contract BankAccount {
         emit Deposited(msg.sender, msg.value, balances[msg.sender]);
     }
 
-    /// Withdraw `amount` wei from the caller's own account.
     function withdraw(uint256 amount) external {
         if (amount == 0) revert ZeroAmount();
 
         uint256 current = balances[msg.sender];
         if (amount > current) revert InsufficientBalance(amount, current);
 
-        // Effects before interaction: the balance is already reduced, so a
-        // malicious receiver re-entering withdraw() sees the new balance.
         balances[msg.sender] = current - amount;
         totalDeposits -= amount;
 
@@ -82,7 +75,6 @@ contract BankAccount {
         emit Withdrawn(msg.sender, amount, balances[msg.sender]);
     }
 
-    /// Move funds from the caller's account to another customer.
     function transferTo(address payable recipient, uint256 amount) external {
         if (recipient == address(0)) revert InvalidRecipient();
         if (amount == 0) revert ZeroAmount();
@@ -96,17 +88,14 @@ contract BankAccount {
         emit Transferred(msg.sender, recipient, amount);
     }
 
-    /// Balance of one customer (in wei).
     function balanceOf(address account) external view returns (uint256) {
         return balances[account];
     }
 
-    /// ETH actually held by the contract (should equal sum of all balances).
     function contractBalance() external view returns (uint256) {
         return address(this).balance;
     }
 
-    /// Owner-only: transfer control of the bank to a new address.
     function transferOwnership(address newOwner) external onlyOwner {
         if (newOwner == address(0)) revert InvalidRecipient();
 

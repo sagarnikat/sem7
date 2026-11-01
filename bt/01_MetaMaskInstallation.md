@@ -62,6 +62,59 @@ numbers and build instructions change often, so follow the repo README.
    **wallet password** (the password only unlocks this device, it is not the
    seed phrase).
 
+## Studying Ether spent per transaction
+
+Every transaction consumes **gas** — a unit of computation. You pay
+
+```
+fee (ETH) = gas used × gas price
+gas price is quoted in gwei, and 1 gwei = 10^-9 ETH
+```
+
+Modern Ethereum (EIP-1559) splits the gas price into a **base fee** burned by
+the network and a **priority fee** paid to the validator. MetaMask shows both
+before you confirm.
+
+### Where to see it
+
+1. Start a transaction (for example, send `0.01` Sepolia ETH to a classmate).
+2. In the MetaMask confirmation window click **Edit → Advanced gas fee** to
+   see the gas limit, base fee and priority fee.
+3. Confirm the transaction and open it in the **Activity** tab.
+4. Click **View on Etherscan** and open the transaction details.
+5. Note **Gas Limit**, **Gas Used**, **Gas Price** and **Transaction Fee**.
+
+### What changes the fee
+
+| Factor | Effect |
+| --- | --- |
+| Simple ETH transfer | 21,000 gas (the minimum) |
+| Deploying a contract | much higher — code and storage are written |
+| Writing new storage in a contract | higher than updating existing storage |
+| Reading a view function | free (`eth_call`, no transaction) |
+| Network congestion | raises the base fee |
+| Calldata size | every zero/non-zero byte has a small cost |
+
+### Observation table (fill this in)
+
+Use Sepolia only; test ETH has no real value, but the gas mechanics are the
+same as mainnet.
+
+| Transaction | Gas limit | Gas used | Gas price (gwei) | Fee (ETH) |
+| --- | ---: | ---: | ---: | ---: |
+| Send 0.01 ETH to a wallet | | | | |
+| Deploy `03_BankAccount.sol` | | | | |
+| Call `deposit` with 0.1 ETH | | | | |
+| Deploy `04_StudentData.sol` | | | | |
+| Call `addStudent` | | | | |
+| Call `updateStudent` | | | | |
+| Call `removeStudent` | | | | |
+
+Calculate the fee yourself for at least two rows and check it against
+Etherscan. Mention in your journal that a failed transaction still pays for
+the gas it consumed, and that view functions cost nothing because they are
+not mined.
+
 ## Troubleshooting
 
 | Problem | Fix |
