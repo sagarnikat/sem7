@@ -37,107 +37,46 @@ pragma solidity ^0.8.20;
  *   Remix IDE -> Solidity compiler 0.8.20 or newer -> Deploy & Run ->
  *   Injected Provider (MetaMask) -> Sepolia -> Deploy.
  */
-contract StudentData {
-    struct Student {
-        uint256 id;
+
+ //code
+ //------------------------------------
+
+
+//SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+contract StudentData{
+    struct Student{
+        uint rollNo;
+        uint age;
         string name;
-        string course;
-        uint256 age;
+        uint marks;
+        
     }
 
-    Student[] private students;
-    mapping(uint256 => uint256) private indexOf;
+    Student[] public students;
 
-    uint256 public totalDonations;
-    bytes public lastFallbackData;
-    address public lastFallbackSender;
-
-    event StudentAdded(uint256 indexed id, string name, uint256 position);
-    event StudentUpdated(uint256 indexed id, string name);
-    event StudentRemoved(uint256 indexed id);
-    event Received(address indexed sender, uint256 amount);
-    event FallbackReceived(address indexed sender, uint256 amount, bytes data);
-
-    error StudentAlreadyExists(uint256 id);
-    error StudentNotFound(uint256 id);
-    error InvalidStudentData();
-
-    function addStudent(uint256 id, string calldata name,
-                        string calldata course, uint256 age) external {
-        if (indexOf[id] != 0) revert StudentAlreadyExists(id);
-        if (bytes(name).length == 0 || bytes(course).length == 0 || age == 0) {
-            revert InvalidStudentData();
-        }
-
-        students.push(Student(id, name, course, age));
-        indexOf[id] = students.length;
-
-        emit StudentAdded(id, name, students.length - 1);
+    //Add Student
+    function addStudent( uint _rollNo, uint _age, string memory _name, uint _marks)public{
+        students.push(Student(_rollNo,_age,_name,_marks));
     }
 
-    function getStudent(uint256 id) external view returns (Student memory) {
-        uint256 slot = indexOf[id];
-        if (slot == 0) revert StudentNotFound(id);
-        return students[slot - 1];
+    //Get Student
+    function getStudent(uint index)public view returns(uint, string memory, uint){
+        require (index<students.length,"Invalid ID");
+        Student memory s = students[index];
+        return (s.rollNo,s.name, s.marks);
     }
 
-    function getAllStudents() external view returns (Student[] memory) {
-        return students;
-    }
-
-    function studentCount() external view returns (uint256) {
+    //Get Student Count
+    function getCount()public view returns(uint) {
         return students.length;
     }
 
-    function updateStudent(uint256 id, string calldata name,
-                           string calldata course, uint256 age) external {
-        uint256 slot = indexOf[id];
-        if (slot == 0) revert StudentNotFound(id);
-        if (bytes(name).length == 0 || bytes(course).length == 0 || age == 0) {
-            revert InvalidStudentData();
-        }
-
-        Student storage student = students[slot - 1];
-        student.name = name;
-        student.course = course;
-        student.age = age;
-
-        emit StudentUpdated(id, name);
-    }
-
-    function removeStudent(uint256 id) external {
-        uint256 slot = indexOf[id];
-        if (slot == 0) revert StudentNotFound(id);
-
-        uint256 position = slot - 1;
-        uint256 lastPosition = students.length - 1;
-
-        if (position != lastPosition) {
-            students[position] = students[lastPosition];
-            indexOf[students[position].id] = position + 1;
-        }
-
-        students.pop();
-        delete indexOf[id];
-
-        emit StudentRemoved(id);
-    }
-
-    receive() external payable {
-        totalDonations += msg.value;
-        emit Received(msg.sender, msg.value);
-    }
-
     fallback() external payable {
-        totalDonations += msg.value;
-        lastFallbackData = msg.data;
-        lastFallbackSender = msg.sender;
-
-        emit FallbackReceived(msg.sender, msg.value, msg.data);
+        require(msg.value>0,"Ether must be greater than 0");
     }
-}
+    // receive() external payable {
+    // require(msg.value > 0, "Ether must be greater than 0");
 
-// END OF CONTRACT
-// The array stores full structs, indexOf gives O(1) id lookup, and the
-// swap-and-pop removal avoids shifting every later element. The fallback is
-// payable so unknown calls with ETH are recorded instead of reverting.
+}

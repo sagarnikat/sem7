@@ -25,83 +25,57 @@ pragma solidity ^0.8.20;
  *     A production bank would additionally use access control roles,
  *     upgradeable proxies, interest accounting and off-chain KYC.
  */
-contract BankAccount {
 
-    address public owner;
+
+
+//code
+
+//------------------------------------------------------------------------------------------
+
+
+//SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+contract BankAccount{
+    //mapping line, D,W,S:
     mapping(address => uint256) private balances;
-    uint256 public totalDeposits;
 
-    event Deposited(address indexed account, uint256 amount, uint256 newBalance);
-    event Withdrawn(address indexed account, uint256 amount, uint256 newBalance);
-    event Transferred(address indexed from, address indexed to, uint256 amount);
-    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
-
-    error NotOwner();
-    error ZeroAmount();
-    error InsufficientBalance(uint256 requested, uint256 available);
-    error InvalidRecipient();
-    error TransferFailed();
-
-    modifier onlyOwner() {
-        if (msg.sender != owner) revert NotOwner();
-        _;
-    }
-
-    constructor() {
-        owner = msg.sender;
-    }
-
-    function deposit() external payable {
-        if (msg.value == 0) revert ZeroAmount();
-
+    //Deposit Ether:
+    function deposit() public payable{
+        require(msg.value>0, "Deposit must be greater than 0");
         balances[msg.sender] += msg.value;
-        totalDeposits += msg.value;
-
-        emit Deposited(msg.sender, msg.value, balances[msg.sender]);
     }
 
-    function withdraw(uint256 amount) external {
-        if (amount == 0) revert ZeroAmount();
+    //Withdraw Ether:
+    function withdraw(uint256 amount) public {
+        require(amount>0, "Amount must be greater than 0");
+        require(balances[msg.sender]>=amount, "Insufficient Balance");
+        balances[msg.sender]-=amount;
+        (bool success,) = payable(msg.sender).call{value:amount}("");
 
-        uint256 current = balances[msg.sender];
-        if (amount > current) revert InsufficientBalance(amount, current);
-
-        balances[msg.sender] = current - amount;
-        totalDeposits -= amount;
-
-        (bool ok, ) = payable(msg.sender).call{value: amount}("");
-        if (!ok) revert TransferFailed();
-
-        emit Withdrawn(msg.sender, amount, balances[msg.sender]);
+        require(success, "Transfer Fialed");
     }
-
-    function transferTo(address payable recipient, uint256 amount) external {
-        if (recipient == address(0)) revert InvalidRecipient();
-        if (amount == 0) revert ZeroAmount();
-
-        uint256 current = balances[msg.sender];
-        if (amount > current) revert InsufficientBalance(amount, current);
-
-        balances[msg.sender] = current - amount;
-        balances[recipient] += amount;
-
-        emit Transferred(msg.sender, recipient, amount);
-    }
-
-    function balanceOf(address account) external view returns (uint256) {
-        return balances[account];
-    }
-
-    function contractBalance() external view returns (uint256) {
-        return address(this).balance;
-    }
-
-    function transferOwnership(address newOwner) external onlyOwner {
-        if (newOwner == address(0)) revert InvalidRecipient();
-
-        address previous = owner;
-        owner = newOwner;
-
-        emit OwnershipTransferred(previous, newOwner);
+    //Show Balance:
+    function displayBalance() public view returns(uint256){
+        return balances[msg.sender];
     }
 }
+
+
+//--------------------------------------------------------------------
+steps 
+0. log in gmail : nikatsagar94@gmail.com 
+    pass: Sagar@123
+
+    metemask pass: Sagar@123
+1. open metamask 
+2. log in remix ide
+3. go to files -> contract creata file bank.sol
+4. copy past above code 
+5. compile code
+6. deploy select evarnaments ->  brauser extension , options -> sefolia testnet metamask
+7. delpy  select bank.sol
+8. kepp evry thing as it is click delpy click confornm in metemask
+9. open terminal  click net to debug expald , chat copy contact addres
+10. go to deploy contact add contact and put contact addres click connect 
+11. 
